@@ -13,9 +13,9 @@ from middlewares.database import DatabaseSessionMiddleware
 from services.scheduler_service import SchedulerService
 from services.sheet_service import SheetService
 
-# Configure detailed logging
+# Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s.%(funcName)s: %(message)s",
     handlers=[
         logging.StreamHandler(),
@@ -23,6 +23,13 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+# Suppress only noisy third-party logs (keep aiogram and handlers)
+logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+logging.getLogger("aiohttp").setLevel(logging.WARNING)
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
+logging.getLogger("gspread").setLevel(logging.WARNING)
+logging.getLogger("google.oauth2").setLevel(logging.WARNING)
 
 # Global bot reference for notifications
 _bot_ref = None

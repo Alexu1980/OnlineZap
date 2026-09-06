@@ -86,10 +86,9 @@ async def handle_back_from_contacts(message: Message, state: FSMContext):
 
 async def _proceed_to_additional(message: Message, state: FSMContext):
     logger.info(f"[PHONE] Proceeding to additional question for user {message.from_user.id}")
-    skip_kb = ReplyKeyboardMarkup(
-        keyboards=[[KeyboardButton(text="Пропустить")]],
-        resize_keyboard=True,
-    )
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="Пропустить"))
+    skip_kb = builder.as_markup(resize_keyboard=True)
     await state.set_state(BookingFSM.AWAITING_ADDITIONAL)
     await message.answer(
         "📝 Необязательный вопрос:\n\n"
