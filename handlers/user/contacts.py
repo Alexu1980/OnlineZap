@@ -1,9 +1,10 @@
 import logging
 import re
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import KeyboardButton
 
 from handlers.user.start import BookingFSM
 from keyboards.inline import build_phone_keyboard, build_review_keyboard
