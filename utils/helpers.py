@@ -1,8 +1,4 @@
 import re
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 def format_phone(raw: str) -> str:

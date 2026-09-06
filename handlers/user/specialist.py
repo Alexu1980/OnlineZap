@@ -10,9 +10,14 @@ router = Router()
 
 
 @router.callback_query(lambda c: c.data.startswith("spec_") and c.data != "spec_help")
-async def cb_select_specialist(callback: CallbackQuery, state: FSMContext):
+async def cb_select_specialist(callback: CallbackQuery, state: FSMContext, db_session):
+    from database.repositories import get_specialist_by_id
     specialist_id = int(callback.data.split("_")[1])
-    await state.update_data(specialist_id=specialist_id)
+    specialist = await get_specialist_by_id(db_session, specialist_id)
+    await state.update_data(
+        specialist_id=specialist_id,
+        specialist_name=specialist.name if specialist else "Неизвестно",
+    )
     await state.set_state(BookingFSM.AWAITING_DATE)
 
     from handlers.user.scheduling import get_available_dates

@@ -11,7 +11,8 @@ from database.repositories import get_active_specialists
 def build_welcome_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="📝 Записаться на консультацию", callback_data="start_booking"))
-    return builder.as_dict()["inline_keyboard"]
+    builder.adjust(1)
+    return builder.inline_keyboard
 
 
 # ==================== Consent ====================
@@ -24,7 +25,8 @@ def build_consent_keyboard() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(text="📄 Политика конфиденциальности", callback_data="show_policy"),
     )
-    return builder.as_dict()["inline_keyboard"]
+    builder.adjust(1, 1)
+    return builder.inline_keyboard
 
 
 # ==================== Specialist ====================
@@ -41,7 +43,7 @@ async def build_specialist_keyboard(specialists: list) -> InlineKeyboardMarkup:
         callback_data="spec_help",
     )
     builder.adjust(1)
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard
 
 
 # ==================== Date ====================
@@ -64,7 +66,7 @@ def build_date_keyboard(dates: list[str], back_callback: str = "back") -> Inline
     if back_callback:
         builder.row(InlineKeyboardButton(text="← Назад", callback_data=back_callback))
     builder.adjust(3, 3)
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard
 
 
 # ==================== Time ====================
@@ -79,7 +81,7 @@ def build_time_keyboard(slots: list[dict], back_callback: str = "back") -> Inlin
     if back_callback:
         builder.row(InlineKeyboardButton(text="← Назад", callback_data=back_callback))
     builder.adjust(4, 4)
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard
 
 
 # ==================== Contacts ====================
@@ -93,7 +95,7 @@ def build_phone_keyboard() -> ReplyKeyboardMarkup:
         KeyboardButton(text="✏️ Ввести вручную"),
     )
     builder.adjust(1)
-    return builder.as_dict["keyboard"]
+    return builder.keyboard
 
 
 def build_manual_phone_keyboard() -> ReplyKeyboardMarkup:
@@ -102,7 +104,7 @@ def build_manual_phone_keyboard() -> ReplyKeyboardMarkup:
         KeyboardButton(text="← Вернуться к выбору"),
     )
     builder.adjust(1)
-    return builder.as_dict["keyboard"]
+    return builder.keyboard
 
 
 # ==================== Review ====================
@@ -112,7 +114,7 @@ def build_review_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="✅ Подтвердить запись", callback_data="confirm_booking")
     builder.button(text="✏️ Изменить данные", callback_data="edit_booking")
     builder.adjust(1, 1)
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard
 
 
 # ==================== Booking Actions ====================
@@ -128,7 +130,7 @@ def build_booking_action_keyboard(booking_id: int) -> InlineKeyboardMarkup:
         callback_data=f"cancel_{booking_id}",
     )
     builder.adjust(1, 1)
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard
 
 
 # ==================== Confirm Cancel ====================
@@ -138,7 +140,7 @@ def build_confirm_cancel_keyboard(booking_id: int) -> InlineKeyboardMarkup:
     builder.button(text="Да, отменить", callback_data=f"confirm_cancel_{booking_id}")
     builder.button(text="Отмена", callback_data=f"cancel_action_{booking_id}")
     builder.adjust(1, 1)
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard
 
 
 # ==================== Reschedule ====================
@@ -146,4 +148,4 @@ def build_confirm_cancel_keyboard(booking_id: int) -> InlineKeyboardMarkup:
 def build_reschedule_back_keyboard(booking_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="← Назад к записям", callback_data=f"my_bookings_{booking_id}")
-    return builder.as_dict()["inline_keyboard"]
+    return builder.inline_keyboard

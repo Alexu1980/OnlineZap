@@ -1,3 +1,4 @@
+import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -17,6 +18,8 @@ from database.repositories import (
 from services.booking_service import BookingService
 from services.sheet_service import SheetService
 from services.scheduler_service import SchedulerService
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 

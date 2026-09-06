@@ -8,6 +8,7 @@ from database.repositories import (
     get_booking_by_id,
     get_bookings_by_status,
     update_manager_comment,
+    update_booking_status,
 )
 from keyboards.inline import build_confirm_cancel_keyboard
 from services.booking_service import BookingService
@@ -47,7 +48,15 @@ async def cb_update_status(callback: CallbackQuery, db_session):
     booking_id = int(parts[2])
     new_status = parts[3] if len(parts) > 3 else "Подтверждена"
 
-    await message.answer(f"Статус записи #{booking_id} обновлён на {new_status}.")
+    await update_booking_status(db_session, booking_id, new_status)
+    await callback.message.answer(f"Статус записи #{booking_id} обновлён на {new_status}.")
+    await callback.answer()
+    """Обновление статуса записи."""
+    parts = callback.data.split("_")
+    booking_id = int(parts[2])
+    new_status = parts[3] if len(parts) > 3 else "Подтверждена"
+
+    await callback.message.answer(f"Статус записи #{booking_id} обновлён на {new_status}.")
     await callback.answer()
 
 

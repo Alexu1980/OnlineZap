@@ -1,9 +1,12 @@
+import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from handlers.user.start import BookingFSM
+
+logger = logging.getLogger(__name__)
 from handlers.user.scheduling import get_available_dates
 from keyboards.inline import build_date_keyboard, build_time_keyboard, build_booking_action_keyboard
 from database.engine import AsyncSessionLocal

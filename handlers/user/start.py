@@ -6,7 +6,6 @@ from aiogram.fsm.context import FSMContext
 from config.settings import settings
 from database.repositories import save_consent, has_consent, get_active_specialists
 from keyboards.inline import build_welcome_keyboard, build_consent_keyboard, build_specialist_keyboard
-from database.repositories import get_active_specialists
 
 router = Router()
 
