@@ -13,16 +13,19 @@ from middlewares.database import DatabaseSessionMiddleware
 from services.scheduler_service import SchedulerService
 from services.sheet_service import SheetService
 
-# Configure logging
+# Configure detailed logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s.%(funcName)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("bot.log", encoding="utf-8"),
+    ],
 )
 logger = logging.getLogger(__name__)
 
 # Global bot reference for notifications
 _bot_ref = None
-
 
 # Import routers
 from handlers.user import start as user_start
@@ -47,7 +50,7 @@ async def cleanup_expired_reservations_task():
                 if count > 0:
                     logger.info(f"Очищены истёкшие резервы: {count}")
         except Exception as e:
-            logger.error(f"Ошибка очистки резервов: {e}")
+            logger.error(f"Ошибка очистки резервов: {e}", exc_info=True)
         await asyncio.sleep(60)
 
 
@@ -56,11 +59,21 @@ async def on_startup(**kwargs):
     global _bot_ref
     _bot_ref = kwargs.get("bot")
 
+    logger.info("=" * 60)
+    logger.info("ЗАПУСК БОТА")
+    logger.info("=" * 60)
+    logger.info(f"Bot token: {settings.bot_token[:10]}...")
+    logger.info(f"Admin IDs: {settings.admin_ids}")
+    logger.info(f"Admin chat: {settings.admin_chat_id}")
+    logger.info(f"Google Sheets: {settings.google_sheet_id}")
+
     # Инициализация базы данных
-    logger.info("Инициализация базы данных...")
+    logger.info("Шаг 1/4: Инициализация базы данных...")
     await init_db()
+    logger.info("Шаг 1/4: База данных инициализирована")
 
     # Добавление специалистов по умолчанию (если нет)
+    logger.info("Шаг 2/4: Проверка специалистов...")
     async def _add_specs():
         async with AsyncSessionLocal() as db:
             specs = await get_active_specialists(db)
@@ -73,21 +86,25 @@ async def on_startup(**kwargs):
                 ]
                 db.add_all(default_specs)
                 await db.commit()
-                logger.info("Добавлены специалисты по умолчанию.")
+                logger.info(f"Добавлено {len(default_specs)} специалистов по умолчанию")
+            else:
+                logger.info(f"Найдено {len(specs)} специалистов")
 
     await _add_specs()
 
     # Добавление расписания по умолчанию
+    logger.info("Шаг 3/4: Проверка расписания...")
     async def _add_availability():
         async with AsyncSessionLocal() as db:
             await add_default_availability(db)
-            logger.info("Расписание по умолчанию добавлено.")
+            logger.info("Расписание проверено/добавлено")
 
     await _add_availability()
 
     # Инициализация Google Sheets
-    logger.info("Инициализация Google Sheets...")
+    logger.info("Шаг 4/4: Инициализация Google Sheets...")
     sheet_service = SheetService()
+    logger.info("Google Sheets сервис инициализирован")
 
     # Инициализация планировщика
     logger.info("Инициализация планировщика напоминаний...")
@@ -95,15 +112,21 @@ async def on_startup(**kwargs):
     if _bot_ref:
         scheduler.set_bot(_bot_ref)
     scheduler.start()
-    logger.info("Планировщик запущен.")
+    logger.info("Планировщик запущен")
 
     # Запуск периодической очистки
     cleanup_task = asyncio.create_task(cleanup_expired_reservations_task())
+    logger.info("Периодическая очистка резервов запущена")
+    logger.info("=" * 60)
+    logger.info("БОТ ГОТОВ К РАБОТЕ")
+    logger.info("=" * 60)
     return {"cleanup_task": cleanup_task}
 
 
 def register_all_handlers(dp: Dispatcher):
     """Регистрация всех обработчиков."""
+    logger.info("Регистрация middleware и обработчиков...")
+
     # Middleware
     dp.message.middleware(DatabaseSessionMiddleware())
     dp.callback_query.middleware(DatabaseSessionMiddleware())
@@ -122,12 +145,18 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(admin_bookings.router)
     dp.include_router(admin_sheets.router)
 
+    logger.info("Все обработчики зарегистрированы")
+
 
 async def on_shutdown(**kwargs):
     """Обработчик остановки бота."""
-    logger.info("Остановка планировщика...")
+    logger.info("=" * 60)
+    logger.info("ОСТАНОВКА БОТА")
+    logger.info("=" * 60)
+
     scheduler = SchedulerService()
     scheduler.stop()
+    logger.info("Планировщик остановлен")
 
     workflow_data = kwargs.get("workflow_data", {})
     cleanup_task = workflow_data.get("cleanup_task")
@@ -137,8 +166,9 @@ async def on_shutdown(**kwargs):
             await cleanup_task
         except asyncio.CancelledError:
             pass
+        logger.info("Очистка резервов остановлена")
 
-    logger.info("Бот остановлен.")
+    logger.info("БОТ ОСТАНОВЛЕН")
 
 
 def main():
@@ -157,11 +187,11 @@ def main():
     register_all_handlers(dp)
 
     # Start polling
-    logger.info("Бот запущен...")
+    logger.info("Запуск polling...")
     try:
         dp.run_polling(bot_instance, skip_updates=True)
     except KeyboardInterrupt:
-        logger.info("Остановлен пользователем.")
+        logger.info("Получен сигнал KeyboardInterrupt")
     except Exception as e:
         logger.error(f"Критическая ошибка: {e}", exc_info=True)
         sys.exit(1)

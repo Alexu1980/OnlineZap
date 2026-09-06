@@ -1,3 +1,5 @@
+import logging
+import re
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -7,11 +9,13 @@ from handlers.user.start import BookingFSM
 from keyboards.inline import build_phone_keyboard, build_review_keyboard
 from utils.helpers import get_datetime_display
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 
 @router.message(BookingFSM.AWAITING_NAME)
 async def handle_name(message: Message, state: FSMContext):
+    logger.info(f"[NAME] User {message.from_user.id} entered name: {message.text[:30]}")
     if message.text and len(message.text.strip()) >= 2:
         await state.update_data(user_name=message.text.strip())
         await state.set_state(BookingFSM.AWAITING_PHONE)
@@ -30,8 +34,10 @@ async def handle_name(message: Message, state: FSMContext):
 
 @router.message(BookingFSM.AWAITING_PHONE, F.text == "📱 Поделиться номером")
 async def handle_phone_shared(message: Message, state: FSMContext):
+    logger.info(f"[PHONE] User {message.from_user.id} shared contact")
     if message.contact:
         phone = "+" + str(message.contact.phone_number)
+        logger.info(f"[PHONE] Contact received: {phone}")
         await state.update_data(user_phone=phone)
         await _proceed_to_additional(message, state)
     else:
@@ -40,6 +46,7 @@ async def handle_phone_shared(message: Message, state: FSMContext):
 
 @router.message(BookingFSM.AWAITING_PHONE, F.text == "✏️ Ввести вручную")
 async def handle_manual_phone_prompt(message: Message, state: FSMContext):
+    logger.info(f"[PHONE] User {message.from_user.id} chose manual input")
     await message.answer(
         "Введите ваш номер телефона в формате +7XXXXXXXXXX:",
     )
@@ -47,9 +54,10 @@ async def handle_manual_phone_prompt(message: Message, state: FSMContext):
 
 @router.message(BookingFSM.AWAITING_PHONE)
 async def handle_phone_manual(message: Message, state: FSMContext):
-    import re
+    logger.info(f"[PHONE] User {message.from_user.id} entered phone: {message.text[:20]}")
     phone = re.sub(r"[^\d+]", "", message.text.strip())
     if len(phone) >= 10 and (phone.startswith("+") or phone.startswith("7")):
+        logger.info(f"[PHONE] Valid phone: {phone}")
         await state.update_data(user_phone=phone)
         await _proceed_to_additional(message, state)
     else:
@@ -61,6 +69,7 @@ async def handle_phone_manual(message: Message, state: FSMContext):
 @router.message(BookingFSM.AWAITING_NAME, F.text == "← Вернуться к выбору")
 @router.message(BookingFSM.AWAITING_PHONE, F.text == "← Вернуться к выбору")
 async def handle_back_from_contacts(message: Message, state: FSMContext):
+    logger.info(f"[BACK] User {message.from_user.id} went back from contacts")
     from handlers.user.scheduling import get_available_dates
     from keyboards.inline import build_date_keyboard
 
@@ -75,6 +84,7 @@ async def handle_back_from_contacts(message: Message, state: FSMContext):
 
 
 async def _proceed_to_additional(message: Message, state: FSMContext):
+    logger.info(f"[PHONE] Proceeding to additional question for user {message.from_user.id}")
     skip_kb = ReplyKeyboardMarkup(
         keyboards=[[KeyboardButton(text="Пропустить")]],
         resize_keyboard=True,

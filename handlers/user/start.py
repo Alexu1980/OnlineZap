@@ -1,12 +1,14 @@
+import logging
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from config.settings import settings
-from database.repositories import save_consent, has_consent, get_active_specialists
+from database.repositories import save_consent, get_active_specialists
 from keyboards.inline import build_welcome_keyboard, build_consent_keyboard, build_specialist_keyboard
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 # FSM States
@@ -49,15 +51,18 @@ POLICY_TEXT = (
 
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
+    logger.info(f"[START] User {message.from_user.id} ({message.from_user.username}) executed /start")
     await state.clear()
     await message.answer(
         WELCOME_MESSAGE,
         reply_markup=build_welcome_keyboard(),
     )
+    logger.info(f"[START] Welcome message sent to {message.from_user.id}")
 
 
 @router.callback_query(lambda c: c.data == "start_booking")
 async def cb_start_booking(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[START_BOOKING] User {callback.from_user.id} clicked 'Записаться'")
     await state.set_state(BookingFSM.AWAITING_CONSENT)
     await callback.message.answer(
         "📋 Для записи необходимо ваше согласие на обработку персональных данных.\n\n"
@@ -67,10 +72,12 @@ async def cb_start_booking(callback: CallbackQuery, state: FSMContext):
         reply_markup=build_consent_keyboard(),
     )
     await callback.answer()
+    logger.info(f"[START_BOOKING] Consent screen shown to {callback.from_user.id}")
 
 
 @router.callback_query(lambda c: c.data == "show_policy")
 async def cb_show_policy(callback: CallbackQuery):
+    logger.info(f"[SHOW_POLICY] User {callback.from_user.id} requested privacy policy")
     await callback.message.answer(
         POLICY_TEXT,
         reply_markup=build_consent_keyboard(),
@@ -80,7 +87,7 @@ async def cb_show_policy(callback: CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "consent_given")
 async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_session):
-    from database.repositories import save_consent
+    logger.info(f"[CONSENT] User {callback.from_user.id} gave consent")
     user_id = callback.from_user.id
     await save_consent(db_session, user_id)
 
@@ -88,12 +95,14 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
 
     specialists = await get_active_specialists(db_session)
     if not specialists:
+        logger.warning(f"[CONSENT] No specialists available for user {user_id}")
         await callback.message.answer(
             "Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером."
         )
         await state.clear()
         return
 
+    logger.info(f"[CONSENT] Showing {len(specialists)} specialists to user {user_id}")
     keyboard = await build_specialist_keyboard(specialists)
     await callback.message.answer(
         "👨‍⚕️ Выберите специалиста:\n\n"

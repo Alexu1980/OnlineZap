@@ -3,8 +3,6 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from database.repositories import (
     create_booking,
     delete_reservation_by_slot_key,
@@ -27,6 +25,8 @@ from exceptions.booking import (
 from services.sheet_service import SheetService
 from services.scheduler_service import SchedulerService
 
+logger = logging.getLogger(__name__)
+
 
 class BookingService:
     """Сервис для управления бронированиями."""
@@ -44,13 +44,13 @@ class BookingService:
         phone: str,
         additional_info: str | None = None,
     ) -> dict:
-        """Создание новой записи."""
-        # Get specialist name
+        logger.info(f"[BOOKING_CREATE] Creating booking: user={user_id}, spec={specialist_id}, date={date_str}, time={time_str}")
+
         specialist = await get_specialist_by_id(db, specialist_id)
         if not specialist:
+            logger.error(f"[BOOKING_CREATE] Specialist {specialist_id} not found")
             raise BookingNotFound("Специалист не найден.")
 
-        # Parse consultation datetime
         consultation_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
         consultation_utc = datetime(
             consultation_dt.year, consultation_dt.month, consultation_dt.day,
@@ -58,7 +58,6 @@ class BookingService:
             tzinfo=timezone.utc,
         )
 
-        # Create booking record
         booking = await create_booking(
             db,
             user_telegram_id=user_id,
@@ -73,8 +72,8 @@ class BookingService:
             additional_info=additional_info,
             status="Подтверждена",
         )
+        logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to database")
 
-        # Write to Google Sheets
         sheet_service = SheetService()
         sheet_id = await sheet_service.append_booking({
             "id": booking.id,
@@ -89,16 +88,21 @@ class BookingService:
             "status": "Подтверждена",
             "manager_comment": additional_info or "",
         })
-        booking.google_sheet_row = sheet_id
+        if sheet_id > 0:
+            logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to Google Sheets (row {sheet_id})")
+            booking.google_sheet_row = sheet_id
+        else:
+            logger.warning(f"[BOOKING_CREATE] Google Sheets write failed for booking #{booking.id}")
+
         await db.commit()
 
-        # Schedule reminders
         scheduler = SchedulerService.get_instance()
         if scheduler:
             scheduler.schedule_reminders(booking)
+            logger.info(f"[BOOKING_CREATE] Reminders scheduled for booking #{booking.id}")
 
-        # Notify manager
         await BookingService._notify_manager(db, booking)
+        logger.info(f"[BOOKING_CREATE] Booking #{booking.id} completed successfully")
 
         return {
             "id": booking.id,
@@ -116,7 +120,8 @@ class BookingService:
         new_time_str: str,
         user_id: int,
     ) -> dict:
-        """Перенос консультации."""
+        logger.info(f"[BOOKING_RESCHEDULE] Rescheduling booking #{booking_id} to {new_date_str} {new_time_str}")
+
         booking = await get_booking_by_id(db, booking_id)
         if not booking:
             raise BookingNotFound()
@@ -124,26 +129,20 @@ class BookingService:
         if booking.status == "Отменена":
             raise BookingAlreadyCancelled()
 
-        # Check if consultation already passed
         if booking.consultation_datetime < datetime.now(timezone.utc):
             raise BookingAlreadyCompleted()
 
-        # Get specialist
         specialist = await get_specialist_by_id(db, booking.specialist_id)
         if not specialist:
             raise BookingNotFound("Специалист не найден.")
 
-        # Check new slot availability
         if await has_booking_at(db, booking.specialist_id,
                                 datetime.strptime(f"{new_date_str} {new_time_str}", "%Y-%m-%d %H:%M")):
             raise SlotAlreadyBooked("Новое время уже занято.")
 
-        # Old slot info
         old_date = booking.consultation_date
         old_time = booking.consultation_time
 
-        # Update booking
-        old_datetime = booking.consultation_datetime
         new_datetime = datetime(
             datetime.strptime(f"{new_date_str} {new_time_str}", "%Y-%m-%d %H:%M").year,
             datetime.strptime(f"{new_date_str} {new_time_str}", "%Y-%m-%d %H:%M").month,
@@ -158,11 +157,9 @@ class BookingService:
         await update_booking_field(db, booking_id, "consultation_datetime", new_datetime)
         await update_booking_field(db, booking_id, "status", "Перенесена")
 
-        # Update Google Sheets
         sheet_service = SheetService()
         if booking.google_sheet_row:
             sheet_service.update_booking_status(booking.google_sheet_row, "Перенесена")
-            # Append new row with updated info
             await sheet_service.append_booking({
                 "id": booking.id,
                 "created_at": booking.created_at.strftime("%Y-%m-%d %H:%M") if booking.created_at else "",
@@ -177,14 +174,14 @@ class BookingService:
                 "manager_comment": f"Перенесено с {old_date} {old_time}",
             })
 
-        # Reschedule reminders
         scheduler = SchedulerService.get_instance()
         if scheduler:
             scheduler.reschedule_reminders(booking_id, new_datetime)
 
-        # Notify manager
         await BookingService._notify_manager(db, booking,
                                              f"Перенесена с {old_date} {old_time} на {new_date_str} {new_time_str}")
+
+        logger.info(f"[BOOKING_RESCHEDULE] Booking #{booking_id} rescheduled to {new_date_str} {new_time_str}")
 
         return {
             "id": booking.id,
@@ -199,7 +196,8 @@ class BookingService:
         booking_id: int,
         user_id: int,
     ) -> dict:
-        """Отмена консультации."""
+        logger.info(f"[BOOKING_CANCEL] Cancelling booking #{booking_id} by user {user_id}")
+
         booking = await get_booking_by_id(db, booking_id)
         if not booking:
             raise BookingNotFound()
@@ -210,16 +208,15 @@ class BookingService:
         if booking.consultation_datetime < datetime.now(timezone.utc):
             raise BookingAlreadyCompleted()
 
-        # Update status
         await update_booking_status(db, booking_id, "Отменена")
 
-        # Update Google Sheets
         sheet_service = SheetService()
         if booking.google_sheet_row:
             sheet_service.update_booking_status(booking.google_sheet_row, "Отменена")
 
-        # Notify manager
         await BookingService._notify_manager(db, booking, "Отменена")
+
+        logger.info(f"[BOOKING_CANCEL] Booking #{booking_id} cancelled")
 
         return {
             "id": booking.id,
@@ -228,7 +225,6 @@ class BookingService:
 
     @staticmethod
     async def _notify_manager(db: AsyncSession, booking, reason: str = "") -> None:
-        """Уведомление менеджера о новой/изменённой записи."""
         from config.settings import settings
         from main import _bot_ref as main_bot
 
@@ -255,13 +251,12 @@ class BookingService:
                     text=msg,
                     parse_mode="HTML",
                 )
-                logger.info(f"Уведомление менеджеру отправлено для booking #{booking.id}")
+                logger.info(f"[NOTIFY] Manager notification sent for booking #{booking.id}")
         except Exception as e:
-            logger.error(f"Ошибка уведомления менеджера: {e}")
+            logger.error(f"[NOTIFY] Error sending manager notification: {e}")
 
     @staticmethod
     def format_booking_notification(booking, reason: str = "") -> str:
-        """Форматирование уведомления для менеджера."""
         msg = (
             f"📋 <b>Новая заявка #{booking.id}</b>\n\n"
             f"👤 Имя: {booking.user_name}\n"

@@ -20,7 +20,6 @@ from services.sheet_service import SheetService
 from services.scheduler_service import SchedulerService
 
 logger = logging.getLogger(__name__)
-
 router = Router()
 
 
@@ -29,6 +28,9 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     user_id = callback.from_user.id
     telegram_username = callback.from_user.username
+
+    logger.info(f"[CONFIRM] User {user_id} confirmed booking: specialist={data.get('specialist_id')}, date={data.get('selected_date')}, time={data.get('selected_time')}")
+    logger.info(f"[CONFIRM] User data: name={data.get('user_name')}, phone={data.get('user_phone')}")
 
     try:
         async with AsyncSessionLocal() as db:
@@ -45,14 +47,13 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
                 additional_info=data.get("additional_info"),
             )
 
-            # Clean up reservation
             await delete_reservation_by_slot_key(db, data["slot_key"])
             await db.commit()
 
-        # Clear state
+        logger.info(f"[CONFIRM] Booking #{booking['id']} created successfully for user {user_id}")
+
         await state.clear()
 
-        # Send confirmation
         confirm_msg = (
             f"✅ Ваша запись подтверждена!\n\n"
             f"👨‍⚕️ Специалист: {booking['specialist_name']}\n"
@@ -66,10 +67,10 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
         kb = build_booking_action_keyboard(booking["id"])
         await callback.message.answer(confirm_msg, reply_markup=kb)
         await callback.answer()
+        logger.info(f"[CONFIRM] Confirmation message sent to user {user_id}")
 
     except Exception as e:
-        logger = __import__('logging').getLogger(__name__)
-        logger.error(f"Ошибка при подтверждении записи: {e}", exc_info=True)
+        logger.error(f"[CONFIRM] Error creating booking for user {user_id}: {e}", exc_info=True)
         await callback.message.answer(
             f"❌ При создании записи произошла ошибка: {str(e)}\n"
             "Пожалуйста, попробуйте записаться снова."
@@ -79,6 +80,7 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "edit_booking")
 async def cb_edit_booking(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[EDIT] User {callback.from_user.id} requested to edit booking data")
     await state.set_state(BookingFSM.AWAITING_NAME)
     await callback.message.answer(
         "✏️ Введите ваше имя заново:",
@@ -89,6 +91,7 @@ async def cb_edit_booking(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("my_bookings_"))
 async def cb_my_bookings(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
+    logger.info(f"[MY_BOOKINGS] User {user_id} requested their bookings")
     async with AsyncSessionLocal() as db:
         bookings = await get_bookings_by_user(db, user_id)
 
@@ -109,15 +112,18 @@ async def cb_my_bookings(callback: CallbackQuery, state: FSMContext):
     kb = build_booking_action_keyboard(bookings[0].id)
     await callback.message.answer(msg, reply_markup=kb)
     await callback.answer()
+    logger.info(f"[MY_BOOKINGS] Showing {len(bookings)} bookings to user {user_id}")
 
 
 @router.callback_query(F.data.startswith("reschedule_"))
 async def cb_reschedule(callback: CallbackQuery, state: FSMContext):
     from handlers.user.reschedule import handle_reschedule_callback
+    logger.info(f"[RESCHEDULE] User {callback.from_user.id} clicked reschedule")
     await handle_reschedule_callback(callback, state)
 
 
 @router.callback_query(F.data.startswith("cancel_"))
 async def cb_cancel(callback: CallbackQuery, state: FSMContext):
     from handlers.user.cancel import handle_cancel_callback
+    logger.info(f"[CANCEL] User {callback.from_user.id} clicked cancel")
     await handle_cancel_callback(callback, state)

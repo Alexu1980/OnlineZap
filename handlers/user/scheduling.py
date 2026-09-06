@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Router, F
@@ -19,10 +20,11 @@ from keyboards.inline import build_date_keyboard, build_time_keyboard
 from handlers.user.start import BookingFSM
 from config.settings import settings
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def get_available_dates(specialist_id: int) -> list[str]:
+async def get_available_dates(specialist_id: int) -> list:
     """Возвращает список дат с хотя бы одним доступным слотом."""
     dates = get_future_dates(30)
     available_dates = []
@@ -53,9 +55,12 @@ async def get_available_dates(specialist_id: int) -> list[str]:
 @router.callback_query(lambda c: c.data.startswith("date_"))
 async def cb_select_date(callback: CallbackQuery, state: FSMContext):
     date_str = callback.data.split("_", 1)[1]
+    logger.info(f"[DATE] User {callback.from_user.id} selected date {date_str}")
+
     try:
         selected_date = datetime.strptime(date_str, "%Y-%m-%d")
     except ValueError:
+        logger.warning(f"[DATE] Invalid date format from user {callback.from_user.id}: {date_str}")
         await callback.answer("Неверный формат даты.")
         return
 
@@ -63,6 +68,7 @@ async def cb_select_date(callback: CallbackQuery, state: FSMContext):
     specialist_id = data.get("specialist_id")
 
     if not specialist_id:
+        logger.error(f"[DATE] No specialist_id in state for user {callback.from_user.id}")
         await callback.message.answer("Произошла ошибка. Начните заново: /start")
         await state.clear()
         return
@@ -70,7 +76,10 @@ async def cb_select_date(callback: CallbackQuery, state: FSMContext):
     async with AsyncSessionLocal() as db:
         slots = await get_available_slots(db, specialist_id, selected_date)
 
+    logger.info(f"[DATE] Found {len(slots)} slots for user {callback.from_user.id} on {date_str}")
+
     if not slots:
+        logger.info(f"[DATE] No slots available for user {callback.from_user.id} on {date_str}")
         await callback.message.answer(
             "⚠️ На эту дату нет доступных слотов. Пожалуйста, выберите другую дату."
         )
@@ -96,6 +105,7 @@ async def cb_select_date(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(lambda c: c.data == "back_to_date")
 async def cb_back_to_date(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[BACK] User {callback.from_user.id} went back to date selection")
     specialist_id = (await state.get_data()).get("specialist_id")
     if specialist_id:
         dates = await get_available_dates(specialist_id)
@@ -114,22 +124,25 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     specialist_id = data.get("specialist_id")
     date_str = data.get("selected_date")
 
+    logger.info(f"[TIME] User {callback.from_user.id} selected slot {slot_key}")
+
     if not specialist_id or not date_str:
+        logger.error(f"[TIME] Missing specialist_id or date for user {callback.from_user.id}")
         await callback.message.answer("Произошла ошибка. Начните заново: /start")
         await state.clear()
         return
 
-    # Parse slot key: {specialist_id}_{date}_{time}
     try:
         time_part = slot_key.split("_")[-1]
         consultation_dt = datetime.strptime(f"{date_str} {time_part}", "%Y-%m-%d %H:%M")
     except ValueError:
+        logger.error(f"[TIME] Invalid time format: {slot_key}")
         await callback.message.answer("Ошибка при обработке времени. Попробуйте снова.")
         return
 
     async with AsyncSessionLocal() as db:
-        # Check if already booked
         if await has_booking_at(db, specialist_id, consultation_dt):
+            logger.warning(f"[TIME] Slot {slot_key} already booked for user {callback.from_user.id}")
             slots = await get_available_slots(db, specialist_id, datetime.strptime(date_str, "%Y-%m-%d"))
             keyboard = build_time_keyboard(slots, back_callback="back_to_date")
             await callback.message.answer(
@@ -138,19 +151,20 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
             )
             return
 
-        # Check if reserved by someone else
         existing = await get_active_reservation(db, slot_key)
         if existing:
+            logger.warning(f"[TIME] Slot {slot_key} already reserved by another user")
             await callback.answer("Этот слот уже зарезервирован.")
             return
 
-        # Reserve the slot
         expires_at = datetime.now(timezone.utc) + timedelta(
             seconds=settings.reservation_timeout_seconds
         )
         reservation = await create_reservation(
             db, slot_key, callback.from_user.id, expires_at,
         )
+
+    logger.info(f"[TIME] Slot {slot_key} reserved by user {callback.from_user.id} (expires in {settings.reservation_timeout_seconds}s)")
 
     await state.update_data(
         slot_key=slot_key,
