@@ -54,8 +54,9 @@ async def handle_manual_phone_prompt(message: Message, state: FSMContext):
 
 @router.message(BookingFSM.AWAITING_PHONE)
 async def handle_phone_manual(message: Message, state: FSMContext):
-    logger.info(f"[PHONE] User {message.from_user.id} entered phone: {message.text[:20]}")
-    phone = re.sub(r"[^\d+]", "", message.text.strip())
+    text = message.text or ""
+    logger.info(f"[PHONE] User {message.from_user.id} entered phone: {text[:20]}")
+    phone = re.sub(r"[^\d+]", "", text.strip())
     if len(phone) >= 10 and (phone.startswith("+") or phone.startswith("7")):
         logger.info(f"[PHONE] Valid phone: {phone}")
         await state.update_data(user_phone=phone)
