@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "onlinezap",
+  "private_key_id": "a3fea23f0a5d174d10e2cf09a34609c3fbf00830",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDeT6MCknZM9WDv\nPICO0eu2d2eZiza4zrfYTP75U7p/43MJ4Cd7Yskw7japeNhUEfipx7oKUM5V1CY1\nHGoRV129sb39r0q59J6gpgscVWRD5gbDoRXP4XxTdHWMXFNkg2xEvOxTc37gaBsA\ni04/B7p6gnoxjpV+3PrsMPzD3NgyM3511GqoEGTMUXbp3OY+QCIpM3Rw8qZJPjsi\nXVlkC5RNqNCsUd2LXSFm9N8OiB671y9eFxteWgIq5J1mJFgXEgaKEl3FpkuoSilJ\nCszyZv82mRCAEedY1ZtCKsmpKs+d/Sdz1+w1OEtHjkfK1y9m2xHZC4ooyIZrVqje\n2k6TbyslAgMBAAECggEAP8ATjVXFwezt1r0BWrNdBk64cUIIN7fj5Y2y4nm9thXZ\n89+JQutBqZvuJewnEPi0V6+ULIgem2NCb6GN0xo8If057+kYIzpAUO48qmvcXFI2\n51umvx24ws/XM6B4M48yeYW5uXaZ0C1abO4FyrJjKeWHt/Vc7mvdMuUbXulSQBaW\nNkvpAIcaE8IXwxjyd+OYEmvdiYKwWfqNwWyyDSX/PyIhEmO/c+GGniiLXElpgTvK\n6fzM6mDYu0Hfz3w19uBHE/6LK0Jr457K6wJOwpShMB+m+l01NRT6pUcge9l7THGT\nD0P0SFOKW/HZh3nQW9V6xHQqYAzI7aK6PPTH1itvMwKBgQD6WCKcf3r9kyhhQy3Q\nTyrpblUWAmtsi2iaTjZ8p25ZFEFgmVbjPgAdlqdzvOZZijb3BQkOmcbg+K+kCHwM\nvvJcD2+ysY/+8DYemGyubEiDQqZWZytRHRUSA85zZOIfkt9i1Troi20aFXRFJqtu\nBHq8YIcI+e577jH7dwOykywBDwKBgQDjVV8of6p5f62JAs4KSGLYdwiD2/ETOUvc\nlml3Tf+N7wD8Z6tMsQUs2L0mtWFQqi5R6zoMpJEgM0gXXOFzqBR4MNMM6ZRKt1He\nyi68y9tme0u8nDmtreSRvXRctctWpt5vCxHCOjozL0dwa9Om/Xt7CJo01I0UF97R\n7gaWgxvoiwKBgQCCLJ4ivm8XuBOBL8t8zA3GP+bigPOXB46m3hCbFPzeORgdwN5b\nX3vz5si/9/PXj3UxUV76RqARj37VTswiXI/tquEsDASSThn2ItAwioHSLzALMa5m\niTbRnUUW39htDpQ18ialkQp0S7+fzZHKrW2c0pyk4EFQE/XNin9Ttg9lpQKBgDDo\nBd+9j1wyFpA6NT9LEVDGUuOjJnrfQa3EAg5zjj3npAuo9dY64wUh35d7P+NNqUdg\nVo2vvbTys1irV6k9CKJOxqipe4iTZZ6LWoCtTpb+gW2jIll15o1f96+WQJd0sLes\n5vYk9q5aRoEuAUuUjsMKN7qT24HuHLaHAY3RyOg/AoGAaKIB4ZBQvnvAOD/q/iSP\nR6J1iof2zu/JBsH2N/l6D1SNe34Xma/XtoZjjV7PmBMLbCREMiwpCpureH3XmWnQ\nN5bc9af7SerBSrjND5uK8SN1HD1k8MFnGxoNXEl3UK0sIe+EzfjTWu2FQUQiI+9n\nifmHwpJ6lCPlEratUEQrI5c=\n-----END PRIVATE KEY-----\n",
+  "client_email": "onlinezap-python-telegram-bot@onlinezap.iam.gserviceaccount.com",
+  "client_id": "115550451522620664975",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/onlinezap-python-telegram-bot%40onlinezap.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
