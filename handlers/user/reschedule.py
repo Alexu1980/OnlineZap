@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
@@ -95,7 +96,6 @@ async def handle_reschedule_date(callback: CallbackQuery, state: FSMContext):
             return
 
         from database.repositories import get_available_slots
-        from datetime import datetime
         slots = await get_available_slots(db, booking.specialist_id, datetime.strptime(date_str, "%Y-%m-%d"))
 
     logger.info(f"[RESCHEDULE_DATE] Found {len(slots)} slots for user {callback.from_user.id} on {date_str}")
@@ -145,7 +145,6 @@ async def handle_reschedule_time(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Ошибка при обработке времени.")
         return
 
-    from datetime import timezone
     async with AsyncSessionLocal() as db:
         booking = await get_booking_by_id(db, booking_id)
         if not booking:
@@ -202,7 +201,6 @@ async def handle_reschedule_time(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[RESCHEDULE_TIME] Reschedule completed for booking #{booking_id}")
 
 
-from datetime import datetime, timezone
 from services.scheduler_service import SchedulerService
 
 

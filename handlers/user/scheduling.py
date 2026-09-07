@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 
 from database.engine import AsyncSessionLocal
