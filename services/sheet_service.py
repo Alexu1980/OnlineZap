@@ -1,7 +1,7 @@
 import logging
 import os
 
-from gspread import Client
+import gspread
 from gspread.exceptions import APIError
 from google.oauth2.service_account import Credentials
 
@@ -47,7 +47,7 @@ class SheetService:
             creds = Credentials.from_service_account_file(
                 self._credentials_path, scopes=SCOPES
             )
-            self._client = Client(creds=creds)
+            self._client = gspread.authorize(creds)
             self._spreadsheet = self._client.open_by_key(self._sheet_id)
             self._worksheet = self._spreadsheet.worksheet(self._sheet_name)
             return True
