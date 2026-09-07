@@ -44,22 +44,37 @@ class SheetService:
             return False
 
         try:
+            logger.info(f"Загрузка credentials из: {self._credentials_path}")
+            
             # Загружаем credentials
             creds = Credentials.from_service_account_file(
                 self._credentials_path, scopes=SCOPES
             )
+            logger.info("Credentials загружены успешно")
             
             # Подключаемся через client
             self._client = gspread.Client(credentials=creds, scope=SCOPES)
             self._client.authorize()
+            logger.info("Клиент gspread авторизован")
             
-            # Открываем таблицу
+            # Открываем таблицу по ID
+            logger.info(f"Попытка открыть таблицу ID: {self._sheet_id}")
             self._spreadsheet = self._client.open_by_key(self._sheet_id)
-            self._worksheet = self._spreadsheet.worksheet(self._sheet_name)
+            logger.info(f"Таблица открыта: {self._spreadsheet.title}")
             
-            logger.info("Google Sheets авторизация успешна")
+            # Получаем список всех листов
+            worksheets = self._spreadsheet.worksheets()
+            logger.info(f"Доступные листы: {[w.title for w in worksheets]}")
+            
+            # Открываем нужный лист
+            self._worksheet = self._spreadsheet.worksheet(self._sheet_name)
+            logger.info(f"Лист '{self._sheet_name}' открыт успешно")
+            
             return True
             
+        except gspread.exceptions.WorksheetNotFound as e:
+            logger.error(f"Лист '{self._sheet_name}' не найден в таблице! Доступные листы: {e}")
+            return False
         except Exception as e:
             logger.error("Ошибка авторизации Google Sheets: %s", e, exc_info=True)
             return False
