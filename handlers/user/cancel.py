@@ -21,7 +21,19 @@ router = Router()
 
 @router.callback_query(lambda c: c.data.startswith("cancel_") and not c.data.startswith("cancel_reschedule") and not c.data.startswith("confirm_cancel") and not c.data.startswith("cancel_action"))
 async def handle_cancel_callback(callback: CallbackQuery, state: FSMContext):
-    booking_id = int(callback.data.split("_")[1])
+    # Проверяем что callback имеет формат cancel_{booking_id}
+    parts = callback.data.split("_")
+    if len(parts) != 2:
+        logger.warning(f"[CANCEL] Invalid callback format: {callback.data}")
+        await callback.answer("Произошла ошибка. Попробуйте снова.")
+        return
+    
+    try:
+        booking_id = int(parts[1])
+    except ValueError:
+        logger.warning(f"[CANCEL] Invalid booking_id in callback: {callback.data}")
+        await callback.answer("Произошла ошибка. Попробуйте снова.")
+        return
     logger.info(f"[CANCEL_REQUEST] User {callback.from_user.id} requested to cancel booking #{booking_id}")
 
     async with AsyncSessionLocal() as db:

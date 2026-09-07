@@ -124,6 +124,11 @@ async def cb_reschedule(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("cancel_"))
 async def cb_cancel(callback: CallbackQuery, state: FSMContext):
+    # Проверяем тип callback
+    if callback.data.startswith("cancel_action_") or callback.data.startswith("confirm_cancel_"):
+        # Это внутренние callback для отмены/подтверждения - передаём в cancel.py
+        pass
+    
     from handlers.user.cancel import handle_cancel_callback
     logger.info(f"[CANCEL] User {callback.from_user.id} clicked cancel")
     await handle_cancel_callback(callback, state)
