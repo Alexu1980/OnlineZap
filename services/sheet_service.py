@@ -36,19 +36,39 @@ class SheetService:
 
     def _authorize(self):
         """Авторизация в Google Sheets через Service Account."""
-        if not os.path.exists(self._credentials_path):
+        # Проверяем несколько возможных путей
+        possible_paths = [self._credentials_path]
+        
+        # Если путь относительный, добавляем абсолютные варианты
+        if not os.path.isabs(self._credentials_path):
+            possible_paths.extend([
+                "/app/" + self._credentials_path,
+                "/app/app/" + self._credentials_path,
+                os.path.join(os.getcwd(), self._credentials_path),
+            ])
+        
+        # Находим первый существующий файл
+        credentials_file = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                credentials_file = path
+                break
+        
+        if not credentials_file:
             logger.warning(
-                "Файл credentials не найден: %s. Google Sheets будет отключён.",
-                self._credentials_path,
+                "Файл credentials не найден. Проверены пути: %s",
+                possible_paths,
             )
             return False
+        
+        logger.info("Используется файл credentials: %s", credentials_file)
 
         try:
-            logger.info(f"Загрузка credentials из: {self._credentials_path}")
+            logger.info("Загрузка credentials из: %s", credentials_file)
             
             # Загружаем credentials
             creds = Credentials.from_service_account_file(
-                self._credentials_path, scopes=SCOPES
+                credentials_file, scopes=SCOPES
             )
             logger.info("Credentials загружены успешно")
             

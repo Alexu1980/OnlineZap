@@ -15,7 +15,7 @@ if _env_path.exists():
 class Settings(BaseSettings):
     bot_token: str
     admin_ids_csv: str
-    google_sheets_credentials_path: str
+    google_sheets_credentials_path: str = "credentials.json"
     google_sheet_id: str
     google_sheet_name: str = "Bookings"
     slot_duration_minutes: int = 60
