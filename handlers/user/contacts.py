@@ -4,7 +4,7 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram.types import KeyboardButton
+from aiogram.types import KeyboardButton, ReplyKeyboardRemove
 
 from handlers.user.start import BookingFSM
 from keyboards.inline import build_phone_keyboard, build_review_keyboard
@@ -49,7 +49,8 @@ async def handle_phone_shared(message: Message, state: FSMContext):
 async def handle_manual_phone_prompt(message: Message, state: FSMContext):
     logger.info(f"[PHONE] User {message.from_user.id} chose manual input")
     await message.answer(
-        "Введите ваш номер телефона в формате +7XXXXXXXXXX:",
+        "Введите номер телефона (например: +79644203553):",
+        reply_markup=ReplyKeyboardRemove(resize_keyboard=True),
     )
 
 
@@ -80,13 +81,17 @@ async def handle_phone_manual(message: Message, state: FSMContext):
             phone = "+" + phone
         logger.info(f"[PHONE] Valid phone: {phone}")
         await state.update_data(user_phone=phone)
+        # Скрываем клавиатуру после успешного ввода
+        await message.answer(
+            "✓ Номер принят!",
+            reply_markup=ReplyKeyboardRemove(),
+        )
         await _proceed_to_additional(message, state)
     else:
         logger.warning(f"[PHONE] Invalid phone format: {phone} (digits: {phone_digits}, len: {len(phone_digits)})")
         await message.answer(
             "Номер введён некорректно. Введите номер в формате +7XXXXXXXXXX\n"
-            "Можно вводить с скобками, тире, пробелами — например:\n"
-            "+7 (964) 420-35-53 или 89644203553"
+            "Примеры: +79644203553 или 89644203553"
         )
 
 

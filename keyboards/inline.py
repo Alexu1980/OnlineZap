@@ -94,7 +94,16 @@ def build_phone_keyboard() -> ReplyKeyboardMarkup:
         KeyboardButton(text="✏️ Ввести вручную"),
     )
     builder.adjust(1)
-    return builder.as_markup()
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=True)
+
+
+def build_manual_phone_keyboard() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.row(
+        KeyboardButton(text="✏️ Ввести номер"),
+    )
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=True)
 
 
 def build_manual_phone_keyboard() -> ReplyKeyboardMarkup:
