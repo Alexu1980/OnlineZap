@@ -34,7 +34,11 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
 
     try:
         async with AsyncSessionLocal() as db:
-            logger.info(f"[CONFIRM] Creating booking in database...")
+            logger.info(f"[CONFIRM] Starting booking creation for user {user_id}")
+            logger.info(f"[CONFIRM] Data: specialist={data.get('specialist_id')}, date={data.get('selected_date')}, time={data.get('selected_time')}")
+            logger.info(f"[CONFIRM] User data: name={data.get('user_name')}, phone={data.get('user_phone')}")
+            logger.info(f"[CONFIRM] Slot key: {data.get('slot_key')}")
+            
             booking = await BookingService.create_booking(
                 db=db,
                 user_id=user_id,
@@ -49,6 +53,7 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             )
 
             # Освобождаем резерв слота
+            logger.info(f"[CONFIRM] Deleting reservation for slot {data.get('slot_key')}")
             await delete_reservation_by_slot_key(db, data["slot_key"])
             logger.info(f"[CONFIRM] Booking #{booking['id']} saved successfully")
 

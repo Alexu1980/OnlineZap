@@ -46,58 +46,75 @@ class BookingService:
     ) -> dict:
         logger.info(f"[BOOKING_CREATE] Creating booking: user={user_id}, spec={specialist_id}, date={date_str}, time={time_str}")
 
-        specialist = await get_specialist_by_id(db, specialist_id)
-        if not specialist:
-            logger.error(f"[BOOKING_CREATE] Specialist {specialist_id} not found")
-            raise BookingNotFound("Специалист не найден.")
+        try:
+            specialist = await get_specialist_by_id(db, specialist_id)
+            if not specialist:
+                logger.error(f"[BOOKING_CREATE] Specialist {specialist_id} not found")
+                raise BookingNotFound("Специалист не найден.")
 
-        consultation_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
-        consultation_utc = datetime(
-            consultation_dt.year, consultation_dt.month, consultation_dt.day,
-            consultation_dt.hour, consultation_dt.minute,
-            tzinfo=timezone.utc,
-        )
+            consultation_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            consultation_utc = datetime(
+                consultation_dt.year, consultation_dt.month, consultation_dt.day,
+                consultation_dt.hour, consultation_dt.minute,
+                tzinfo=timezone.utc,
+            )
 
-        booking = await create_booking(
-            db,
-            user_telegram_id=user_id,
-            user_username=telegram_username or "",
-            user_name=name,
-            user_phone=phone,
-            specialist_id=specialist_id,
-            specialist_name=specialist.name,
-            consultation_date=date_str,
-            consultation_time=time_str,
-            consultation_datetime=consultation_utc,
-            additional_info=additional_info,
-            status="Подтверждена",
-        )
-        
-        # Записываем в Google Sheets (не критично, не коммитим)
-        sheet_service = SheetService()
-        sheet_id = await sheet_service.append_booking({
-            "id": booking.id,
-            "created_at": booking.created_at.strftime("%Y-%m-%d %H:%M") if booking.created_at else "",
-            "user_name": name,
-            "user_phone": phone,
-            "user_username": telegram_username or "",
-            "user_telegram_id": user_id,
-            "specialist_name": specialist.name,
-            "consultation_date": date_str,
-            "consultation_time": time_str,
-            "status": "Подтверждена",
-            "manager_comment": additional_info or "",
-        })
-        if sheet_id > 0:
-            logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to Google Sheets (row {sheet_id})")
-            booking.google_sheet_row = sheet_id
-        else:
-            logger.warning(f"[BOOKING_CREATE] Google Sheets write failed for booking #{booking.id}, but booking will be saved")
-        
-        # Теперь сохраняем всё в БД (booking + google_sheet_row)
-        await db.commit()
-        await db.refresh(booking)
-        logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to database")
+            logger.info(f"[BOOKING_CREATE] Creating booking record in database...")
+            booking = await create_booking(
+                db,
+                user_telegram_id=user_id,
+                user_username=telegram_username or "",
+                user_name=name,
+                user_phone=phone,
+                specialist_id=specialist_id,
+                specialist_name=specialist.name,
+                consultation_date=date_str,
+                consultation_time=time_str,
+                consultation_datetime=consultation_utc,
+                additional_info=additional_info,
+                status="Подтверждена",
+            )
+            
+            logger.info(f"[BOOKING_CREATE] Booking record added to session, id={booking.id}")
+            
+            # Записываем в Google Sheets (не критично, не коммитим)
+            try:
+                sheet_service = SheetService()
+                sheet_id = await sheet_service.append_booking({
+                    "id": booking.id,
+                    "created_at": booking.created_at.strftime("%Y-%m-%d %H:%M") if booking.created_at else "",
+                    "user_name": name,
+                    "user_phone": phone,
+                    "user_username": telegram_username or "",
+                    "user_telegram_id": user_id,
+                    "specialist_name": specialist.name,
+                    "consultation_date": date_str,
+                    "consultation_time": time_str,
+                    "status": "Подтверждена",
+                    "manager_comment": additional_info or "",
+                })
+                if sheet_id > 0:
+                    logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to Google Sheets (row {sheet_id})")
+                    booking.google_sheet_row = sheet_id
+                else:
+                    logger.warning(f"[BOOKING_CREATE] Google Sheets write failed for booking #{booking.id}, but booking will be saved")
+            except Exception as sheet_error:
+                logger.error(f"[BOOKING_CREATE] Google Sheets error (non-fatal): {sheet_error}")
+            
+            # Теперь сохраняем всё в БД (booking + google_sheet_row)
+            logger.info(f"[BOOKING_CREATE] Committing booking to database...")
+            await db.commit()
+            await db.refresh(booking)
+            logger.info(f"[BOOKING_CREATE] Booking #{booking.id} SUCCESSFULLY saved to database with id={booking.id}")
+
+        except Exception as e:
+            logger.error(f"[BOOKING_CREATE] Error creating booking, rolling back: {e}", exc_info=True)
+            try:
+                await db.rollback()
+                logger.info("[BOOKING_CREATE] Transaction rolled back")
+            except Exception as rollback_error:
+                logger.error(f"[BOOKING_CREATE] Rollback failed: {rollback_error}")
+            raise
 
         scheduler = SchedulerService.get_instance()
         if scheduler:
