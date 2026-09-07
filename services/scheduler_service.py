@@ -83,7 +83,7 @@ class SchedulerService:
         if not reminder_24h_sent:
             trigger_24h = DateTrigger(
                 run_date=consultation_dt - timedelta(hours=24),
-                tz=timezone.utc,
+                timezone=timezone.utc,
             )
             if trigger_24h.run_date > datetime.now(timezone.utc):
                 self._scheduler.add_job(
@@ -98,7 +98,7 @@ class SchedulerService:
         if not reminder_2h_sent:
             trigger_2h = DateTrigger(
                 run_date=consultation_dt - timedelta(hours=2),
-                tz=timezone.utc,
+                timezone=timezone.utc,
             )
             if trigger_2h.run_date > datetime.now(timezone.utc):
                 self._scheduler.add_job(

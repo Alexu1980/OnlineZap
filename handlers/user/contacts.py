@@ -56,15 +56,37 @@ async def handle_manual_phone_prompt(message: Message, state: FSMContext):
 @router.message(BookingFSM.AWAITING_PHONE)
 async def handle_phone_manual(message: Message, state: FSMContext):
     text = message.text or ""
-    logger.info(f"[PHONE] User {message.from_user.id} entered phone: {text[:20]}")
+    logger.info(f"[PHONE] User {message.from_user.id} entered phone: {text[:30]}")
+    
+    # Убрать все кроме цифр и+
     phone = re.sub(r"[^\d+]", "", text.strip())
-    if len(phone) >= 10 and (phone.startswith("+") or phone.startswith("7")):
+    logger.info(f"[PHONE] Cleaned phone: {phone}")
+    
+    # Нормализация: если начинается с 8, заменить на +7
+    if phone.startswith("8") and len(phone) == 11:
+        phone = "+7" + phone[1:]
+        logger.info(f"[PHONE] Converted 8 to +7: {phone}")
+    
+    # Если нет + в начале, добавить
+    if not phone.startswith("+") and phone.startswith("7"):
+        phone = "+" + phone
+        logger.info(f"[PHONE] Added + prefix: {phone}")
+    
+    # Проверка длины (минимум 11 символов для +7XXXXXXXXXX)
+    phone_digits = re.sub(r"[^\d]", "", phone)
+    if len(phone_digits) >= 11 and (phone.startswith("+") or phone.startswith("7")):
+        # Гарантируем формат +7XXXXXXXXXX
+        if not phone.startswith("+"):
+            phone = "+" + phone
         logger.info(f"[PHONE] Valid phone: {phone}")
         await state.update_data(user_phone=phone)
         await _proceed_to_additional(message, state)
     else:
+        logger.warning(f"[PHONE] Invalid phone format: {phone} (digits: {phone_digits}, len: {len(phone_digits)})")
         await message.answer(
-            "Номер введён некорректно. Введите номер в формате +7XXXXXXXXXX:"
+            "Номер введён некорректно. Введите номер в формате +7XXXXXXXXXX\n"
+            "Можно вводить с скобками, тире, пробелами — например:\n"
+            "+7 (964) 420-35-53 или 89644203553"
         )
 
 
