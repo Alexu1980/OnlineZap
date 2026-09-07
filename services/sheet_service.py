@@ -35,7 +35,7 @@ class SheetService:
         self._sheet_name = settings.google_sheet_name
 
     def _authorize(self):
-        """Авторизация в Google Sheets."""
+        """Авторизация в Google Sheets через Service Account."""
         if not os.path.exists(self._credentials_path):
             logger.warning(
                 "Файл credentials не найден: %s. Google Sheets будет отключён.",
@@ -44,15 +44,24 @@ class SheetService:
             return False
 
         try:
+            # Загружаем credentials
             creds = Credentials.from_service_account_file(
                 self._credentials_path, scopes=SCOPES
             )
-            self._client = gspread.authorize(creds)
+            
+            # Подключаемся через client
+            self._client = gspread.Client(credentials=creds, scope=SCOPES)
+            self._client.authorize()
+            
+            # Открываем таблицу
             self._spreadsheet = self._client.open_by_key(self._sheet_id)
             self._worksheet = self._spreadsheet.worksheet(self._sheet_name)
+            
+            logger.info("Google Sheets авторизация успешна")
             return True
+            
         except Exception as e:
-            logger.error("Ошибка авторизации Google Sheets: %s", e)
+            logger.error("Ошибка авторизации Google Sheets: %s", e, exc_info=True)
             return False
 
     def _ensure_initialized(self):
@@ -82,6 +91,7 @@ class SheetService:
             existing = self._worksheet.get_all_values()
             if not existing:
                 self._worksheet.update([headers], "A1")
+                logger.info("Google Sheets инициализирован с заголовками")
         except Exception as e:
             logger.error("Ошибка инициализации листа: %s", e)
 
@@ -105,10 +115,11 @@ class SheetService:
                 booking.get("status", ""),
                 booking.get("manager_comment", ""),
             ]
-            self._worksheet.append_row(row)
-            return self._worksheet.row_count
+            result = self._worksheet.append_row(row)
+            logger.info(f"Запись #{booking.get('id')} добавлена в Google Sheets")
+            return result.get('rowCount', -1)
         except Exception as e:
-            logger.error("Ошибка добавления в Google Sheets: %s", e)
+            logger.error("Ошибка добавления в Google Sheets: %s", e, exc_info=True)
             return -1
 
     def update_booking_status(self, row_number: int, status: str) -> bool:
@@ -134,3 +145,11 @@ class SheetService:
         except Exception as e:
             logger.error("Ошибка обновления комментария: %s", e)
             return False
+
+    @classmethod
+    def clear_instance(cls):
+        """Очистка синглтона (для тестирования)."""
+        if cls._instance:
+            cls._instance._worksheet = None
+            cls._instance._spreadsheet = None
+            cls._instance._client = None
