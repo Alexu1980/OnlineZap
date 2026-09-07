@@ -35,12 +35,20 @@ async def cb_personal_cabinet(callback: CallbackQuery):
     
     # Сортируем: сначала будущие, потом прошлые
     from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    
+    # Получаем текущее время без timezone для сравнения
+    now_naive = datetime.now()
+    
     active_bookings = []
     past_bookings = []
     
     for booking in user_bookings:
-        if booking.consultation_datetime and booking.consultation_datetime > now:
+        # Конвертируем consultation_datetime в naive если нужно
+        consult_dt = booking.consultation_datetime
+        if consult_dt and consult_dt.tzinfo is not None:
+            consult_dt = consult_dt.replace(tzinfo=None)
+        
+        if consult_dt and consult_dt > now_naive:
             if booking.status != "Отменена":
                 active_bookings.append(booking)
         else:
@@ -97,11 +105,17 @@ async def cb_past_bookings(callback: CallbackQuery):
         user_bookings = [b for b in all_bookings if b.user_telegram_id == user_id]
     
     from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
-    past_bookings = [
-        b for b in user_bookings
-        if not b.consultation_datetime or b.consultation_datetime <= now or b.status == "Отменена"
-    ]
+    # Используем naive datetime для сравнения
+    now_naive = datetime.now()
+    past_bookings = []
+    
+    for b in user_bookings:
+        consult_dt = b.consultation_datetime
+        if consult_dt and consult_dt.tzinfo is not None:
+            consult_dt = consult_dt.replace(tzinfo=None)
+        
+        if not b.consultation_datetime or consult_dt <= now_naive or b.status == "Отменена":
+            past_bookings.append(b)
     
     if not past_bookings:
         await callback.message.answer("История записей пуста.")
