@@ -3,6 +3,7 @@ from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.engine import AsyncSessionLocal
 from database.repositories import get_bookings_by_user, get_booking_by_id, update_booking_status
@@ -73,7 +74,6 @@ async def cb_personal_cabinet(callback: CallbackQuery):
     
     # Кнопка для просмотра истории
     if past_bookings:
-        from keyboards.inline import InlineKeyboardButton
         builder = InlineKeyboardBuilder()
         builder.button(
             text=f"📜 История ({len(past_bookings)} записей)",
