@@ -33,7 +33,7 @@ async def handle_name(message: Message, state: FSMContext):
         )
 
 
-@router.message(BookingFSM.AWAITING_PHONE, F.text == "📱 Поделиться номером")
+@router.message(BookingFSM.AWAITING_PHONE, F.contact | (F.text == "📱 Поделиться номером"))
 async def handle_phone_shared(message: Message, state: FSMContext):
     logger.info(f"[PHONE] User {message.from_user.id} shared contact")
     if message.contact:
