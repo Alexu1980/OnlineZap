@@ -151,14 +151,19 @@ async def cmd_invite(message: Message):
     logger.info(f"[INVITE] User {message.from_user.id} executed /invite")
     
     from aiogram.utils.keyboard import InlineKeyboardBuilder
+    
+    # Получаем username бота
+    bot_username = (await message.bot.get_me()).username
+    bot_url = f"https://t.me/{bot_username}"
+    
     builder = InlineKeyboardBuilder()
     builder.button(
         text="📤 Поделиться ботом",
-        url=f"https://t.me/share/url?url=https://t.me/{(await message.bot.get_me()).username}&text={INVITE_MESSAGE.replace(chr(10), ' ')}",
+        url=f"https://t.me/share/url?url={bot_url}&text=Привет! Запишись на психологическую консультацию через этого бота:",
     )
     builder.button(
-        text="📋 Скопировать ссылку",
-        url=f"https://t.me/{(await message.bot.get_me()).username}",
+        text="🔗 Открыть бота",
+        url=bot_url,
     )
     builder.button(
         text="← Назад",
