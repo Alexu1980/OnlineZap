@@ -45,6 +45,7 @@ from handlers.user import additional as user_additional
 from handlers.user import review as user_review
 from handlers.user import reschedule as user_reschedule
 from handlers.user import cancel as user_cancel
+from handlers.user import personal_cabinet as user_personal_cabinet
 from handlers.admin import bookings as admin_bookings
 from handlers.admin import sheets as admin_sheets
 
@@ -149,6 +150,7 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(user_review.router)
     dp.include_router(user_reschedule.router)
     dp.include_router(user_cancel.router)
+    dp.include_router(user_personal_cabinet.router)
 
     # Admin routers
     dp.include_router(admin_bookings.router)

@@ -8,8 +8,9 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 def build_welcome_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="📝 Записаться на консультацию", callback_data="start_booking"))
-    builder.adjust(1)
+    builder.button(text="📝 Записаться на консультацию", callback_data="start_booking")
+    builder.button(text="📋 Личный кабинет", callback_data="personal_cabinet")
+    builder.adjust(1, 1)
     return builder.as_markup()
 
 

@@ -46,3 +46,14 @@ def get_future_dates(days_count: int = 30) -> list[str]:
         d = today + timedelta(days=i)
         dates.append(d.strftime("%Y-%m-%d"))
     return dates
+
+
+def format_booking_status(status: str) -> str:
+    """Форматирование статуса записи для отображения."""
+    status_map = {
+        "Подтверждена": "✅ Подтверждена",
+        "Отменена": "❌ Отменена",
+        "Завершена": "✔️ Завершена",
+        "Ожидает": "⏳ Ожидает",
+    }
+    return status_map.get(status, f"📌 {status}")
