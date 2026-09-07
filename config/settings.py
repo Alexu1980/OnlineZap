@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     reservation_timeout_seconds: int = 300
     reminder_24h_enabled: bool = True
     reminder_2h_enabled: bool = True
-    database_url: str = "sqlite+aiosqlite:///./bookings.db"
+    database_url: str = "sqlite+aiosqlite:///./Data/bookings.db"
     admin_chat_id_csv: str
 
     class Config:
