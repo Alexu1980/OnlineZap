@@ -1,9 +1,9 @@
 import logging
 import re
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram.types import KeyboardButton, ReplyKeyboardRemove
 
 from handlers.user.start import BookingFSM
@@ -114,14 +114,30 @@ async def handle_back_from_contacts(message: Message, state: FSMContext):
 
 async def _proceed_to_additional(message: Message, state: FSMContext):
     logger.info(f"[PHONE] Proceeding to additional question for user {message.from_user.id}")
-    builder = ReplyKeyboardBuilder()
-    builder.row(KeyboardButton(text="Пропустить"))
-    skip_kb = builder.as_markup(resize_keyboard=True)
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="⏭ Пропустить",
+        callback_data="skip_additional",
+    )
+    builder.adjust(1)
+    
     await state.set_state(BookingFSM.AWAITING_ADDITIONAL)
     await message.answer(
         "📝 Необязательный вопрос:\n\n"
         "Есть ли что-то, что вы хотели бы сообщить специалисту "
         "перед консультацией?\n\n"
-        "Вы можете написать или нажать «Пропустить».",
-        reply_markup=skip_kb,
+        "Вы можете написать или нажать кнопку ниже:",
+        reply_markup=builder.as_markup(),
     )
+
+
+@router.callback_query(F.data == "skip_additional")
+async def cb_skip_additional(callback: CallbackQuery, state: FSMContext):
+    """Пропуск дополнительного вопроса."""
+    logger.info(f"[ADDITIONAL] User {callback.from_user.id} skipped additional question")
+    await callback.answer()
+    await callback.message.answer(
+        "✅ Хорошо, пропустим этот вопрос.",
+    )
+    from handlers.user.additional import _show_review
+    await _show_review(callback.message, state)

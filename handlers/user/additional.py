@@ -2,7 +2,6 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from handlers.user.start import BookingFSM
 from keyboards.inline import build_review_keyboard
@@ -15,11 +14,7 @@ router = Router()
 @router.message(BookingFSM.AWAITING_ADDITIONAL)
 async def handle_additional(message: Message, state: FSMContext):
     logger.info(f"[ADDITIONAL] User {message.from_user.id} response: {message.text[:50] if message.text else 'skip'}")
-    if message.text and message.text.strip() == "Пропустить":
-        logger.info(f"[ADDITIONAL] User {message.from_user.id} skipped additional question")
-        await _show_review(message, state)
-        return
-
+    
     if message.text and len(message.text.strip()) > 0:
         await state.update_data(additional_info=message.text.strip())
         logger.info(f"[ADDITIONAL] Additional info saved: {message.text[:50]}")
