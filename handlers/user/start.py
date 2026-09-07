@@ -3,6 +3,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config.settings import settings
 from database.repositories import save_consent, get_active_specialists
@@ -108,7 +109,6 @@ async def cmd_lk_user(message: Message):
     """Личный кабинет пользователя - просмотр записей."""
     logger.info(f"[LK_USER] User {message.from_user.id} executed /lk_user")
     
-    from keyboards.inline import InlineKeyboardButton
     builder = InlineKeyboardBuilder()
     builder.button(
         text="📋 Открыть личные записи",
@@ -150,7 +150,7 @@ async def cmd_invite(message: Message):
     """Пригласить друга."""
     logger.info(f"[INVITE] User {message.from_user.id} executed /invite")
     
-    from keyboards.inline import InlineKeyboardButton
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
     builder = InlineKeyboardBuilder()
     builder.button(
         text="📤 Поделиться ботом",
