@@ -73,12 +73,7 @@ class BookingService:
             status="Подтверждена",
         )
         
-        # Сначала сохраняем в БД
-        await db.commit()
-        await db.refresh(booking)
-        logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to database")
-
-        # Затем пытаемся записать в Google Sheets (не критично)
+        # Записываем в Google Sheets (не критично, не коммитим)
         sheet_service = SheetService()
         sheet_id = await sheet_service.append_booking({
             "id": booking.id,
@@ -96,9 +91,13 @@ class BookingService:
         if sheet_id > 0:
             logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to Google Sheets (row {sheet_id})")
             booking.google_sheet_row = sheet_id
-            await db.commit()
         else:
-            logger.warning(f"[BOOKING_CREATE] Google Sheets write failed for booking #{booking.id}, but booking is saved")
+            logger.warning(f"[BOOKING_CREATE] Google Sheets write failed for booking #{booking.id}, but booking will be saved")
+        
+        # Теперь сохраняем всё в БД (booking + google_sheet_row)
+        await db.commit()
+        await db.refresh(booking)
+        logger.info(f"[BOOKING_CREATE] Booking #{booking.id} saved to database")
 
         scheduler = SchedulerService.get_instance()
         if scheduler:

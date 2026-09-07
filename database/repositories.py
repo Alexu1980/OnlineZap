@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, delete, update
@@ -7,10 +8,17 @@ from database.models import (
     ConsentLog, Specialist, Availability, SlotReservation, Booking,
 )
 
+logger = logging.getLogger(__name__)
+
 
 # ==================== Consent ====================
 
 async def save_consent(db: AsyncSession, user_id: int) -> None:
+    # Проверяем, давал ли пользователь уже согласие
+    if await has_consent(db, user_id):
+        logger.info(f"[CONSENT] User {user_id} already gave consent, skipping")
+        return
+    
     consent = ConsentLog(user_telegram_id=user_id)
     db.add(consent)
     await db.commit()
