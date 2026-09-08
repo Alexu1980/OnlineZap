@@ -120,9 +120,12 @@ async def handle_confirm_cancel(callback: CallbackQuery, state: FSMContext):
 
 async def _send_follow_up_message(user_id: int, specialist_name: str):
     """Отправка дожимного сообщения через 2 часа со скидкой 15%."""
-    from main import _bot_ref as bot
+    try:
+        from main import _bot_ref as bot
+    except ImportError:
+        bot = None
     
-    if not bot:
+    if bot is None:
         logger.warning("[FOLLOW_UP] Bot not available for follow-up message")
         return
     
