@@ -42,7 +42,12 @@ async def handle_reschedule_callback(callback: CallbackQuery, state: FSMContext)
         await callback.answer()
         return
 
-    await state.update_data(reschedule_booking_id=booking_id)
+    # Сохраняем данные для переноса
+    await state.update_data(
+        reschedule_booking_id=booking_id,
+        specialist_id=booking.specialist_id,
+        specialist_name=booking.specialist_name,
+    )
     await state.set_state(BookingFSM.AWAITING_DATE)
 
     dates = await get_available_dates(booking.specialist_id)
