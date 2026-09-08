@@ -128,9 +128,21 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             f"Для управления записью используйте кнопки ниже:"
         )
 
-        from keyboards.inline import build_booking_action_keyboard
-        kb = build_booking_action_keyboard(booking_id)
-        await callback.message.answer(confirm_msg, reply_markup=kb)
+        from keyboards.inline import build_booking_action_keyboard, InlineKeyboardButton, InlineKeyboardBuilder
+        
+        # Создаём клавиатуру с кнопками
+        kb = InlineKeyboardBuilder()
+        
+        # Кнопки управления записью
+        kb.button(text="🔄 Перенести", callback_data=f"reschedule_{booking_id}")
+        kb.button(text="❌ Отменить", callback_data=f"cancel_{booking_id}")
+        
+        # Кнопка личного кабинета
+        kb.button(text="📋 Личный кабинет", callback_data="personal_cabinet")
+        
+        kb.adjust(2, 1)  # 2 кнопки в ряд, затем 1
+        
+        await callback.message.answer(confirm_msg, reply_markup=kb.as_markup())
         await callback.answer()
         logger.info(f"[CONFIRM] Confirmation message sent to user {user_id}")
 

@@ -6,12 +6,15 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.engine import AsyncSessionLocal
-from database.repositories import get_bookings_by_user, get_booking_by_id, update_booking_status
+from database.repositories import get_bookings_by_user, get_booking_by_id, update_booking_status, get_all_bookings
 from keyboards.inline import build_booking_action_keyboard, build_welcome_keyboard
 from utils.helpers import get_datetime_display
 
 logger = logging.getLogger(__name__)
 router = Router()
+
+# Проверяем что datetime доступен
+assert datetime is not None, "datetime должен быть импортирован"
 
 
 @router.callback_query(F.data == "personal_cabinet")
