@@ -57,6 +57,14 @@ async def cb_select_date(callback: CallbackQuery, state: FSMContext):
     date_str = callback.data.split("_", 1)[1]
     logger.info(f"[DATE] User {callback.from_user.id} selected date {date_str}")
 
+    # Проверяем, не является ли это переносом (обработается в reschedule.py)
+    data = await state.get_data()
+    if data.get("reschedule_booking_id"):
+        # Это перенос - передаём обработку в reschedule.py
+        from handlers.user.reschedule import handle_reschedule_date
+        await handle_reschedule_date(callback, state)
+        return
+
     try:
         selected_date = datetime.strptime(date_str, "%Y-%m-%d")
     except ValueError:
@@ -64,7 +72,6 @@ async def cb_select_date(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Неверный формат даты.")
         return
 
-    data = await state.get_data()
     specialist_id = data.get("specialist_id")
 
     if not specialist_id:
