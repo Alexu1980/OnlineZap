@@ -22,25 +22,6 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2  # seconds
 
 
-def retry_on_failure(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
-    """Декоратор для повторения попыток при ошибке Google API."""
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            for attempt in range(max_retries):
-                try:
-                    return await func(*args, **kwargs)
-                except (gspread.exceptions.APIError, Exception) as e:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Попытка {attempt + 1} failed for {func.__name__}: {e}. Retry in {delay}s...")
-                        time.sleep(delay)
-                    else:
-                        logger.error(f"{func.__name__} failed after {max_retries} attempts: {e}")
-                        raise
-        return wrapper
-    return decorator
-
-
 class SheetService:
     """Сервис для работы с Google Sheets."""
 
@@ -167,46 +148,53 @@ class SheetService:
         except Exception as e:
             logger.error("Ошибка инициализации листа: %s", e)
 
-    @retry_on_failure
     async def append_booking(self, booking: dict) -> int:
-        """Добавление записи в Google Sheets. Возвращает номер строки."""
+        """Добавление записи в Google Sheets с retry-логикой."""
         if not self._ensure_initialized():
             logger.warning("Google Sheets недоступен. Запись не сохранена в таблицу.")
             return -1
 
-        try:
-            # Формируем строку для записи
-            row = [
-                booking.get("id", ""),
-                booking.get("created_at", ""),
-                booking.get("user_name", ""),
-                booking.get("user_phone", ""),
-                booking.get("user_username", ""),
-                booking.get("user_telegram_id", ""),
-                booking.get("specialist_name", ""),
-                booking.get("consultation_date", ""),
-                booking.get("consultation_time", ""),
-                booking.get("status", ""),
-                booking.get("manager_comment", ""),
-            ]
-            
-            logger.info(f"Добавление в Google Sheets: {row}")
-            
-            # append_row возвращает dict с информацией
-            result = self._worksheet.append_row(row)
-            
-            logger.info(
-                f"Запись #{booking.get('id')} успешно добавлена в Google Sheets. "
-                f"Ряд: {result.get('updates', {}).get('updatedRow', 'N/A')}"
-            )
-            return result.get('updates', {}).get('updatedRow', -1)
-            
-        except Exception as e:
-            logger.error(
-                f"Ошибка добавления в Google Sheets: {e}. "
-                f"Данные: {booking.get('id')} - {booking.get('user_name')}"
-            )
-            return -1
+        # Retry logic
+        for attempt in range(MAX_RETRIES):
+            try:
+                # Формируем строку для записи
+                row = [
+                    booking.get("id", ""),
+                    booking.get("created_at", ""),
+                    booking.get("user_name", ""),
+                    booking.get("user_phone", ""),
+                    booking.get("user_username", ""),
+                    booking.get("user_telegram_id", ""),
+                    booking.get("specialist_name", ""),
+                    booking.get("consultation_date", ""),
+                    booking.get("consultation_time", ""),
+                    booking.get("status", ""),
+                    booking.get("manager_comment", ""),
+                ]
+                
+                logger.info(f"Добавление в Google Sheets (попытка {attempt + 1}): {row}")
+                
+                # append_row возвращает dict с информацией
+                result = self._worksheet.append_row(row)
+                
+                logger.info(
+                    f"Запись #{booking.get('id')} успешно добавлена в Google Sheets. "
+                    f"Ряд: {result.get('updates', {}).get('updatedRow', 'N/A')}"
+                )
+                return result.get('updates', {}).get('updatedRow', -1)
+                
+            except Exception as e:
+                if attempt < MAX_RETRIES - 1:
+                    logger.warning(
+                        f"Ошибка при добавлении в Google Sheets (попытка {attempt + 1}/{MAX_RETRIES}): {e}"
+                    )
+                    time.sleep(RETRY_DELAY)
+                else:
+                    logger.error(
+                        f"Ошибка добавления в Google Sheets после {MAX_RETRIES} попыток: {e}. "
+                        f"Данные: {booking.get('id')} - {booking.get('user_name')}"
+                    )
+                    return -1
 
     def update_booking_status(self, row_number: int, status: str) -> bool:
         """Обновление статуса записи в Google Sheets."""
