@@ -11,6 +11,10 @@ from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+# Проверяем версию gspread для совместимости
+GSHEET_VERSION = tuple(map(int, gspread.__version__.split('.')[:2]))
+logger.info(f"Версия gspread: {gspread.__version__}")
+
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # Retry configuration for Google API
@@ -97,10 +101,18 @@ class SheetService:
             )
             logger.info("Credentials загружены успешно")
             
-            # Подключаемся через client
-            self._client = gspread.Client(credentials=creds, scope=SCOPES)
-            self._client.authorize()
-            logger.info("Клиент gspread авторизован")
+            # Авторизация в зависимости от версии gspread
+            if GSHEET_VERSION >= (6, 0):
+                # gspread 6.x+ использует gspread.authorize()
+                logger.info("Используем gspread 6.x+ метод авторизации")
+                self._client = gspread.authorize(creds)
+            else:
+                # gspread 5.x использует Client
+                logger.info("Используем gspread 5.x метод авторизации")
+                self._client = gspread.Client(credentials=creds, scope=SCOPES)
+                self._client.authorize()
+            
+            logger.info("Авторизация в gspread успешна")
             
             # Открываем таблицу по ID
             logger.info(f"Попытка открыть таблицу ID: {self._sheet_id}")
