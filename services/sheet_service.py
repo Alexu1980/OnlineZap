@@ -1,5 +1,7 @@
 import logging
 import os
+import time
+from functools import wraps
 
 import gspread
 from gspread.exceptions import APIError
@@ -10,6 +12,29 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+# Retry configuration for Google API
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # seconds
+
+
+def retry_on_failure(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
+    """Декоратор для повторения попыток при ошибке Google API."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except (gspread.exceptions.APIError, Exception) as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Попытка {attempt + 1} failed for {func.__name__}: {e}. Retry in {delay}s...")
+                        time.sleep(delay)
+                    else:
+                        logger.error(f"{func.__name__} failed after {max_retries} attempts: {e}")
+                        raise
+        return wrapper
+    return decorator
 
 
 class SheetService:
@@ -130,6 +155,7 @@ class SheetService:
         except Exception as e:
             logger.error("Ошибка инициализации листа: %s", e)
 
+    @retry_on_failure
     async def append_booking(self, booking: dict) -> int:
         """Добавление записи в Google Sheets. Возвращает номер строки."""
         if not self._ensure_initialized():
@@ -137,6 +163,7 @@ class SheetService:
             return -1
 
         try:
+            # Формируем строку для записи
             row = [
                 booking.get("id", ""),
                 booking.get("created_at", ""),
@@ -150,11 +177,23 @@ class SheetService:
                 booking.get("status", ""),
                 booking.get("manager_comment", ""),
             ]
+            
+            logger.info(f"Добавление в Google Sheets: {row}")
+            
+            # append_row возвращает dict с информацией
             result = self._worksheet.append_row(row)
-            logger.info(f"Запись #{booking.get('id')} добавлена в Google Sheets")
-            return result.get('rowCount', -1)
+            
+            logger.info(
+                f"Запись #{booking.get('id')} успешно добавлена в Google Sheets. "
+                f"Ряд: {result.get('updates', {}).get('updatedRow', 'N/A')}"
+            )
+            return result.get('updates', {}).get('updatedRow', -1)
+            
         except Exception as e:
-            logger.error("Ошибка добавления в Google Sheets: %s", e, exc_info=True)
+            logger.error(
+                f"Ошибка добавления в Google Sheets: {e}. "
+                f"Данные: {booking.get('id')} - {booking.get('user_name')}"
+            )
             return -1
 
     def update_booking_status(self, row_number: int, status: str) -> bool:

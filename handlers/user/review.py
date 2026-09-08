@@ -2,7 +2,6 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from handlers.user.start import BookingFSM
 from keyboards.inline import build_review_keyboard
@@ -14,10 +13,12 @@ from database.repositories import (
     delete_reservation_by_slot_key,
     update_booking_status,
     update_booking_field,
+    create_booking as db_create_booking,
 )
-from services.booking_service import BookingService
+from database.models import Booking
 from services.sheet_service import SheetService
 from services.scheduler_service import SchedulerService
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -28,50 +29,107 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     user_id = callback.from_user.id
     telegram_username = callback.from_user.username
+    
+    specialist_id = data.get("specialist_id")
+    date_str = data.get("selected_date")
+    time_str = data.get("selected_time")
+    slot_key = data.get("slot_key")
+    name = data.get("user_name")
+    phone = data.get("user_phone")
+    additional_info = data.get("additional_info")
 
-    logger.info(f"[CONFIRM] User {user_id} confirmed booking: specialist={data.get('specialist_id')}, date={data.get('selected_date')}, time={data.get('selected_time')}")
-    logger.info(f"[CONFIRM] User data: name={data.get('user_name')}, phone={data.get('user_phone')}")
+    logger.info(f"[CONFIRM] User {user_id} confirmed booking")
+    logger.info(f"[CONFIRM] specialist_id={specialist_id}, date={date_str}, time={time_str}")
+    logger.info(f"[CONFIRM] name={name}, phone={phone}")
 
     try:
         async with AsyncSessionLocal() as db:
-            logger.info(f"[CONFIRM] Starting booking creation for user {user_id}")
-            logger.info(f"[CONFIRM] Data: specialist={data.get('specialist_id')}, date={data.get('selected_date')}, time={data.get('selected_time')}")
-            logger.info(f"[CONFIRM] User data: name={data.get('user_name')}, phone={data.get('user_phone')}")
-            logger.info(f"[CONFIRM] Slot key: {data.get('slot_key')}")
+            # Создаём запись напрямую
+            logger.info(f"[CONFIRM] Creating booking record...")
             
-            booking = await BookingService.create_booking(
-                db=db,
-                user_id=user_id,
-                telegram_username=telegram_username,
-                specialist_id=data["specialist_id"],
-                date_str=data["selected_date"],
-                time_str=data["selected_time"],
-                slot_key=data["slot_key"],
-                name=data["user_name"],
-                phone=data["user_phone"],
-                additional_info=data.get("additional_info"),
+            consultation_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            consultation_utc = datetime(
+                consultation_dt.year, consultation_dt.month, consultation_dt.day,
+                consultation_dt.hour, consultation_dt.minute,
+                tzinfo=timezone.utc,
             )
-
-            # Освобождаем резерв слота
-            logger.info(f"[CONFIRM] Deleting reservation for slot {data.get('slot_key')}")
-            await delete_reservation_by_slot_key(db, data["slot_key"])
-            logger.info(f"[CONFIRM] Booking #{booking['id']} saved successfully")
-
-        logger.info(f"[CONFIRM] Booking #{booking['id']} created successfully for user {user_id}")
+            
+            # Получаем имя специалиста
+            from database.repositories import get_specialist_by_id
+            specialist = await get_specialist_by_id(db, specialist_id)
+            if not specialist:
+                raise Exception("Специалист не найден")
+            
+            # Создаём booking
+            booking = Booking(
+                user_telegram_id=user_id,
+                user_username=telegram_username or "",
+                user_name=name,
+                user_phone=phone,
+                specialist_id=specialist_id,
+                specialist_name=specialist.name,
+                consultation_date=date_str,
+                consultation_time=time_str,
+                consultation_datetime=consultation_utc,
+                additional_info=additional_info,
+                status="Подтверждена",
+            )
+            
+            db.add(booking)
+            logger.info(f"[CONFIRM] Booking added to session, flushing...")
+            await db.flush()  # Получаем booking.id
+            
+            booking_id = booking.id
+            logger.info(f"[CONFIRM] Booking #{booking_id} flushed, committing...")
+            await db.commit()
+            logger.info(f"[CONFIRM] Booking #{booking_id} COMMITTED to database!")
+            
+            # Записываем в Google Sheets (не критично)
+            try:
+                sheet_service = SheetService()
+                await sheet_service.append_booking({
+                    "id": booking_id,
+                    "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                    "user_name": name,
+                    "user_phone": phone,
+                    "user_username": telegram_username or "",
+                    "user_telegram_id": user_id,
+                    "specialist_name": specialist.name,
+                    "consultation_date": date_str,
+                    "consultation_time": time_str,
+                    "status": "Подтверждена",
+                    "manager_comment": additional_info or "",
+                })
+                logger.info(f"[CONFIRM] Booking #{booking_id} saved to Google Sheets")
+            except Exception as e:
+                logger.warning(f"[CONFIRM] Google Sheets error (non-fatal): {e}")
+            
+            # Удаляем резерв слота
+            await delete_reservation_by_slot_key(db, slot_key)
+            await db.commit()
+            logger.info(f"[CONFIRM] Reservation deleted for slot {slot_key}")
+            
+            # Настраиваем напоминания
+            scheduler = SchedulerService.get_instance()
+            if scheduler:
+                scheduler.schedule_reminders(booking)
+                logger.info(f"[CONFIRM] Reminders scheduled for booking #{booking_id}")
+            
+            logger.info(f"[CONFIRM] Booking #{booking_id} SUCCESSFULLY created!")
 
         await state.clear()
 
         confirm_msg = (
             f"✅ Ваша запись подтверждена!\n\n"
-            f"👨‍⚕️ Специалист: {booking['specialist_name']}\n"
-            f"📅 Дата: {get_datetime_display(booking['consultation_date'], booking['consultation_time'])}\n"
-            f"🕐 Время: {booking['consultation_time']}\n\n"
+            f"👨‍⚕️ Специалист: {specialist.name}\n"
+            f"📅 Дата: {get_datetime_display(date_str, time_str)}\n"
+            f"🕐 Время: {time_str}\n\n"
             f"Мы отправим вам напоминание за 24 часа до консультации.\n\n"
             f"Для управления записью используйте кнопки ниже:"
         )
 
         from keyboards.inline import build_booking_action_keyboard
-        kb = build_booking_action_keyboard(booking["id"])
+        kb = build_booking_action_keyboard(booking_id)
         await callback.message.answer(confirm_msg, reply_markup=kb)
         await callback.answer()
         logger.info(f"[CONFIRM] Confirmation message sent to user {user_id}")
