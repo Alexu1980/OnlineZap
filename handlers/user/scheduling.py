@@ -74,6 +74,8 @@ async def cb_select_date(callback: CallbackQuery, state: FSMContext):
 
     specialist_id = data.get("specialist_id")
 
+    logger.info(f"[DATE] State data for user {callback.from_user.id}: {data}")
+
     if not specialist_id:
         logger.error(f"[DATE] No specialist_id in state for user {callback.from_user.id}")
         await callback.message.answer("Произошла ошибка. Начните заново: /start")
@@ -132,9 +134,10 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     date_str = data.get("selected_date")
 
     logger.info(f"[TIME] User {callback.from_user.id} selected slot {slot_key}")
+    logger.info(f"[TIME] State data for user {callback.from_user.id}: {data}")
 
     if not specialist_id or not date_str:
-        logger.error(f"[TIME] Missing specialist_id or date for user {callback.from_user.id}")
+        logger.error(f"[TIME] Missing specialist_id ({specialist_id}) or date ({date_str}) for user {callback.from_user.id}")
         await callback.message.answer("Произошла ошибка. Начните заново: /start")
         await state.clear()
         return

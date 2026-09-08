@@ -22,6 +22,8 @@ async def cb_select_specialist(callback: CallbackQuery, state: FSMContext, db_se
         specialist_id=specialist_id,
         specialist_name=specialist.name if specialist else "Неизвестно",
     )
+    state_data = await state.get_data()
+    logger.info(f"[SPECIALIST] Saved state data for user {callback.from_user.id}: {state_data}")
     await state.set_state(BookingFSM.AWAITING_DATE)
 
     from handlers.user.scheduling import get_available_dates
