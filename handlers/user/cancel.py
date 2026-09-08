@@ -123,8 +123,6 @@ async def _send_follow_up_message(user_id: int, specialist_name: str):
     from main import _bot_ref as bot
     
     if not bot:
-    
-    if not _bot_ref:
         logger.warning("[FOLLOW_UP] Bot not available for follow-up message")
         return
     
