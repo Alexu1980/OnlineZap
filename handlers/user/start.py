@@ -12,7 +12,12 @@ from database.repositories import (
     get_user_consent,
     revoke_consent,
 )
-from keyboards.inline import build_welcome_keyboard, build_consent_keyboard, build_specialist_keyboard
+from keyboards.inline import (
+    build_welcome_keyboard, 
+    build_consent_keyboard, 
+    build_consent_confirmed_keyboard,
+    build_specialist_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 router = Router()
