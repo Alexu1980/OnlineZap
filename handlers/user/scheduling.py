@@ -131,8 +131,11 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     slot_key = callback.data.split("_", 1)[1]
     data = await state.get_data()
     
+    logger.info(f"[TIME] Initial check: reschedule_booking_id={data.get('reschedule_booking_id')}")
+    
     # Проверяем, не является ли это переносом (обработается в reschedule.py)
     if data.get("reschedule_booking_id"):
+        logger.info(f"[TIME] Detected reschedule, forwarding to reschedule.py")
         from handlers.user.reschedule import handle_reschedule_time
         await handle_reschedule_time(callback, state)
         return
@@ -142,6 +145,7 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
 
     logger.info(f"[TIME] User {callback.from_user.id} selected slot {slot_key}")
     logger.info(f"[TIME] State data for user {callback.from_user.id}: {data}")
+    logger.info(f"[TIME] Checking: specialist_id={specialist_id}, date_str={date_str}")
 
     if not specialist_id or not date_str:
         logger.error(f"[TIME] Missing specialist_id ({specialist_id}) or date ({date_str}) for user {callback.from_user.id}")
