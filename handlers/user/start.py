@@ -6,7 +6,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config.settings import settings
-from database.repositories import save_consent, get_active_specialists
+from database.repositories import (
+    save_consent, 
+    get_active_specialists, 
+    get_user_consent,
+    revoke_consent,
+)
 from keyboards.inline import build_welcome_keyboard, build_consent_keyboard, build_specialist_keyboard
 
 logger = logging.getLogger(__name__)
@@ -18,6 +23,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 class BookingFSM(StatesGroup):
     AWAITING_CONSENT = State()
+    CONSENT_GIVEN = State()  # Новое состояние после согласия
     AWAITING_SPECIALIST = State()
     AWAITING_DATE = State()
     AWAITING_TIME = State()
@@ -25,6 +31,10 @@ class BookingFSM(StatesGroup):
     AWAITING_PHONE = State()
     AWAITING_ADDITIONAL = State()
     AWAITING_REVIEW = State()
+
+
+class ConsentFSM(StatesGroup):
+    AWAITING_CONSENT_DECISION = State()  # Ожидание решения по согласию
 
 
 WELCOME_MESSAGE = (
@@ -179,19 +189,59 @@ async def cmd_invite(message: Message):
     logger.info(f"[INVITE] Invite message sent to user {message.from_user.id}")
 
 
-@router.callback_query(lambda c: c.data == "start_booking")
-async def cb_start_booking(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"[START_BOOKING] User {callback.from_user.id} clicked 'Записаться'")
-    await state.set_state(BookingFSM.AWAITING_CONSENT)
+async def _show_specialist_selection(callback: CallbackQuery, state: FSMContext, db_session):
+    """Показ выбора специалиста."""
+    from database.repositories import get_active_specialists
+    from keyboards.inline import build_specialist_keyboard
+    from handlers.user.start import BookingFSM
+    
+    specialists = await get_active_specialists(db_session)
+    if not specialists:
+        logger.warning(f"[SPECIALIST] No specialists available for user {callback.from_user.id}")
+        await callback.message.answer(
+            "Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером."
+        )
+        await state.clear()
+        return
+
+    logger.info(f"[SPECIALIST] Showing {len(specialists)} specialists to user {callback.from_user.id}")
+    keyboard = await build_specialist_keyboard(specialists)
     await callback.message.answer(
-        "📋 Для записи необходимо ваше согласие на обработку персональных данных.\n\n"
-        "Мы собираем минимальный набор данных: имя, номер телефона и информацию о вашей "
-        "записи на консультацию.\n\n"
-        "Все данные защищены и используются только для организации консультаций.",
-        reply_markup=build_consent_keyboard(),
+        "👨‍⚕️ Выберите специалиста:\n\n"
+        "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
+        "и мы поможем подобрать подходящего специалиста.",
+        reply_markup=keyboard,
     )
+    await state.set_state(BookingFSM.AWAITING_SPECIALIST)
     await callback.answer()
-    logger.info(f"[START_BOOKING] Consent screen shown to {callback.from_user.id}")
+
+
+@router.callback_query(lambda c: c.data == "start_booking")
+async def cb_start_booking(callback: CallbackQuery, state: FSMContext, db_session):
+    logger.info(f"[START_BOOKING] User {callback.from_user.id} clicked 'Записаться'")
+    
+    # Проверяем, давал ли пользователь уже согласие
+    user_has_consent = await get_user_consent(db_session, callback.from_user.id)
+    
+    if user_has_consent:
+        logger.info(f"[START_BOOKING] User {callback.from_user.id} already gave consent, showing specialist selection")
+        # Показываем сообщение о том что согласие получено и кнопку выбора специалиста
+        await callback.message.answer(
+            "📋 Ваше согласие на обработку персональных данных уже получено.\n\n"
+            "Вы можете отозвать согласие нажав соответствующую кнопку.",
+            reply_markup=build_consent_keyboard(has_consent=True),
+        )
+    else:
+        logger.info(f"[START_BOOKING] User {callback.from_user.id} needs to give consent")
+        await state.set_state(ConsentFSM.AWAITING_CONSENT_DECISION)
+        await callback.message.answer(
+            "📋 Для записи необходимо ваше согласие на обработку персональных данных.\n\n"
+            "Мы собираем минимальный набор данных: имя, номер телефона и информацию о вашей "
+            "записи на консультацию.\n\n"
+            "Все данные защищены и используются только для организации консультаций.",
+            reply_markup=build_consent_keyboard(has_consent=False),
+        )
+        logger.info(f"[START_BOOKING] Consent screen shown to {callback.from_user.id}")
 
 
 @router.callback_query(lambda c: c.data == "show_policy")
@@ -210,7 +260,41 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
     user_id = callback.from_user.id
     await save_consent(db_session, user_id)
 
-    await state.set_state(BookingFSM.AWAITING_SPECIALIST)
+    # Обновляем сообщение с подтверждением и кнопкой выбора специалиста
+    await callback.message.answer(
+        "✅ Спасибо! Ваше согласие получено.\n\n"
+        "Теперь вы можете записаться на консультацию.",
+        reply_markup=build_consent_confirmed_keyboard(),
+    )
+    await callback.answer()
+    
+    # Сбрасываем состояние согласия
+    await state.clear()
+
+
+@router.callback_query(lambda c: c.data == "consent_confirmed")
+async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_session):
+    logger.info(f"[CONSENT_CONFIRMED] User {callback.from_user.id} proceeding to specialist selection")
+    await _show_specialist_selection(callback, state, db_session)
+
+
+@router.callback_query(lambda c: c.data == "consent_revoked")
+async def cb_consent_revoked(callback: CallbackQuery, state: FSMContext, db_session):
+    logger.info(f"[CONSENT_REVOKED] User {callback.from_user.id} revoked consent")
+    user_id = callback.from_user.id
+    
+    # Удаляем запись о согласии из БД
+    from database.repositories import revoke_consent
+    await revoke_consent(db_session, user_id)
+    
+    # Обновляем сообщение с кнопкой согласия
+    await callback.message.answer(
+        "⚠️ Ваше согласие на обработку персональных данных отозвано.\n\n"
+        "Для продолжения записи, пожалуйста, дайте согласие заново.",
+        reply_markup=build_consent_keyboard(has_consent=False),
+    )
+    await callback.answer()
+    await state.clear()
 
     specialists = await get_active_specialists(db_session)
     if not specialists:

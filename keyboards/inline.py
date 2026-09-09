@@ -16,13 +16,48 @@ def build_welcome_keyboard() -> InlineKeyboardMarkup:
 
 # ==================== Consent ====================
 
-def build_consent_keyboard() -> InlineKeyboardMarkup:
+def build_consent_keyboard(has_consent: bool = False) -> InlineKeyboardMarkup:
+    """
+    Строит клавиатуру для согласия на ПДН.
+    
+    Args:
+        has_consent: True если пользователь уже дал согласие
+    """
     builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(text="✅ Согласен(а)", callback_data="consent_given"),
-    )
+    
+    if has_consent:
+        # Если согласие уже дано - показываем кнопку отмены
+        builder.button(
+            text="❌ Отменить согласие",
+            callback_data="consent_revoked",
+        )
+    else:
+        # Если согласие ещё не дано
+        builder.button(
+            text="Согласен(а)",
+            callback_data="consent_given",
+        )
+    
     builder.row(
         InlineKeyboardButton(text="📄 Политика конфиденциальности", callback_data="show_policy"),
+    )
+    builder.adjust(1, 1)
+    return builder.as_markup()
+
+
+def build_consent_confirmed_keyboard() -> InlineKeyboardMarkup:
+    """
+    Строит клавиатуру после получения согласия.
+    Содержит кнопку подтверждения и выбора специалиста.
+    """
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="✅ Согласие получено",
+        callback_data="consent_confirmed",
+    )
+    builder.button(
+        text="🧑‍🔬 Выбор специалиста",
+        callback_data="start_booking",
     )
     builder.adjust(1, 1)
     return builder.as_markup()

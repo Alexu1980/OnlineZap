@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.callback_query(lambda c: c.data.startswith("cancel_") and not c.data.startswith("cancel_reschedule") and not c.data.startswith("confirm_cancel") and not c.data.startswith("cancel_action"))
+@router.callback_query(lambda c: c.data.startswith("cancel_") and not c.data.startswith("cancel_reschedule") and not c.data.startswith("confirm_cancel") and not c.data.startswith("cancel_action_"))
 async def handle_cancel_callback(callback: CallbackQuery, state: FSMContext):
     # Проверяем что callback имеет формат cancel_{booking_id}
     parts = callback.data.split("_")
@@ -168,7 +168,8 @@ async def handle_cancel_action(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[CANCEL_ACTION] User {callback.from_user.id} cancelled the cancel action for booking #{booking_id}")
     kb = build_booking_action_keyboard(booking_id)
     await callback.message.answer(
-        "Отмена отменена. Ваша запись в силе.",
+        f"✅ Запись #{booking_id} не отменяется.\n\n"
+        f"Ваша запись в силе. Для управления записью используйте кнопки ниже:",
         reply_markup=kb,
     )
     await callback.answer()

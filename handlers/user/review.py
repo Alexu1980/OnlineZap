@@ -31,8 +31,9 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
     telegram_username = callback.from_user.username
     
     specialist_id = data.get("specialist_id")
-    date_str = data.get("selected_date")
-    time_str = data.get("selected_time")
+    # Поддерживаем как обычную запись (selected_date), так и перенос (reschedule_date)
+    date_str = data.get("selected_date") or data.get("reschedule_date")
+    time_str = data.get("selected_time") or data.get("reschedule_time")
     slot_key = data.get("slot_key")
     name = data.get("user_name")
     phone = data.get("user_phone")
@@ -41,6 +42,16 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[CONFIRM] User {user_id} confirmed booking")
     logger.info(f"[CONFIRM] specialist_id={specialist_id}, date={date_str}, time={time_str}")
     logger.info(f"[CONFIRM] name={name}, phone={phone}")
+    logger.info(f"[CONFIRM] Full state data: {data}")
+
+    if not date_str or not time_str:
+        logger.error(f"[CONFIRM] Missing date ({date_str}) or time ({time_str}) in state")
+        await callback.message.answer(
+            "❌ При создании записи произошла ошибка: отсутствуют дата или время.\n"
+            "Пожалуйста, начните запись заново: /start"
+        )
+        await state.clear()
+        return
 
     try:
         async with AsyncSessionLocal() as db:

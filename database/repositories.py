@@ -31,6 +31,23 @@ async def has_consent(db: AsyncSession, user_id: int) -> bool:
     return result.scalar_one_or_none() is not None
 
 
+async def get_user_consent(db: AsyncSession, user_id: int) -> bool:
+    """Получить статус согласия пользователя (True если дал согласие)."""
+    return await has_consent(db, user_id)
+
+
+async def revoke_consent(db: AsyncSession, user_id: int) -> None:
+    """Отзыв согласия пользователя на обработку ПДН."""
+    result = await db.execute(
+        delete(ConsentLog).where(ConsentLog.user_telegram_id == user_id)
+    )
+    if result.rowcount > 0:
+        await db.commit()
+        logger.info(f"[CONSENT] User {user_id} consent revoked")
+    else:
+        logger.warning(f"[CONSENT] User {user_id} has no consent to revoke")
+
+
 # ==================== Specialists ====================
 
 async def get_active_specialists(db: AsyncSession) -> list[Specialist]:

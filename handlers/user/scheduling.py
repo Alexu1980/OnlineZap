@@ -189,6 +189,7 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(
         slot_key=slot_key,
+        selected_date=date_str,
         selected_time=time_part,
         consultation_datetime=consultation_dt.isoformat(),
         reservation_id=reservation.id,
