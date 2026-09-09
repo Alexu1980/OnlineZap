@@ -104,6 +104,7 @@ async def handle_reschedule_date(callback: CallbackQuery, state: FSMContext):
         slots = await get_available_slots(db, booking.specialist_id, datetime.strptime(date_str, "%Y-%m-%d"))
 
     logger.info(f"[RESCHEDULE_DATE] Found {len(slots)} slots for user {callback.from_user.id} on {date_str}")
+    logger.info(f"[RESCHEDULE_DATE] State data before saving: {await state.get_data()}")
 
     if not slots:
         logger.info(f"[RESCHEDULE_DATE] No slots available for user {callback.from_user.id} on {date_str}")
@@ -116,7 +117,13 @@ async def handle_reschedule_date(callback: CallbackQuery, state: FSMContext):
         )
         return
 
-    await state.update_data(reschedule_date=date_str)
+    await state.update_data(
+        reschedule_date=date_str,
+        specialist_id=booking.specialist_id,
+        specialist_name=booking.specialist_name,
+    )
+    logger.info(f"[RESCHEDULE_DATE] Saved state: reschedule_date={date_str}, specialist_id={booking.specialist_id}")
+    
     keyboard = build_time_keyboard(slots, back_callback=f"cancel_reschedule_{booking_id}")
     await callback.message.answer(
         f"🕐 Выберите новое время:\n\n"
@@ -128,15 +135,18 @@ async def handle_reschedule_date(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(lambda c: c.data.startswith("time_"))
 async def handle_reschedule_time(callback: CallbackQuery, state: FSMContext):
+    """Обработка выбора времени при переносе. Вызывается из scheduling.py."""
     slot_key = callback.data.split("_", 1)[1]
     data = await state.get_data()
     booking_id = data.get("reschedule_booking_id")
     date_str = data.get("reschedule_date")
+    specialist_id = data.get("specialist_id")
 
     logger.info(f"[RESCHEDULE_TIME] User {callback.from_user.id} selected time {slot_key} for booking #{booking_id}")
+    logger.info(f"[RESCHEDULE_TIME] State data: booking_id={booking_id}, date={date_str}, specialist_id={specialist_id}, full_data={data}")
 
     if not booking_id or not date_str:
-        logger.error(f"[RESCHEDULE_TIME] Missing data for user {callback.from_user.id}")
+        logger.error(f"[RESCHEDULE_TIME] Missing data for user {callback.from_user.id}: booking_id={booking_id}, date={date_str}")
         await callback.message.answer("Произошла ошибка. Начните заново.")
         await state.clear()
         return

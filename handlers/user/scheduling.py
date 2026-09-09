@@ -130,6 +130,13 @@ async def cb_back_to_date(callback: CallbackQuery, state: FSMContext):
 async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     slot_key = callback.data.split("_", 1)[1]
     data = await state.get_data()
+    
+    # Проверяем, не является ли это переносом (обработается в reschedule.py)
+    if data.get("reschedule_booking_id"):
+        from handlers.user.reschedule import handle_reschedule_time
+        await handle_reschedule_time(callback, state)
+        return
+    
     specialist_id = data.get("specialist_id")
     date_str = data.get("selected_date")
 
