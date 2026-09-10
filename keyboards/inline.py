@@ -61,7 +61,7 @@ def build_consent_confirmed_keyboard() -> InlineKeyboardMarkup:
     )
     builder.button(
         text="🧑‍🔬 Выбор специалиста",
-        callback_data="start_booking",
+        callback_data="go_to_specialist",
     )
     builder.adjust(1, 1)
     return builder.as_markup()
