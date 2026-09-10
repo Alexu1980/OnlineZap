@@ -263,28 +263,51 @@ async def cb_show_policy(callback: CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "consent_given")
 async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_session):
-    logger.info(f"[CONSENT] User {callback.from_user.id} gave consent")
+    logger.info(f"[CONSENT] User {callback.from_user.id} clicked 'Согласен(а)'")
     user_id = callback.from_user.id
+    
+    # Получаем текущее состояние
+    current_state = await state.get_state()
+    logger.info(f"[CONSENT] Current state: {current_state}")
+    
     await save_consent(db_session, user_id)
+    logger.info(f"[CONSENT] Consent saved for user {user_id}")
 
-    # Редактируем текущее сообщение и меняем кнопки
+    # Редактируем текущее сообщение и показываем кнопку подтверждения
     try:
         await callback.message.edit_text(
             text="✅ Спасибо! Ваше согласие получено.\n\nТеперь вы можете записаться на консультацию.",
             reply_markup=build_consent_confirmed_keyboard(),
         )
+        logger.info(f"[CONSENT] Message edited for user {user_id}")
     except Exception as e:
         logger.error(f"[CONSENT] Error editing message: {e}")
         await callback.answer()
         return
+    
+    # Сбрасываем состояние чтобы избежать повторных вызовов
+    await state.clear()
     await callback.answer()
+    logger.info(f"[CONSENT] State cleared for user {user_id}")
 
 
 @router.callback_query(lambda c: c.data == "consent_confirmed")
 async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_session):
-    logger.info(f"[CONSENT_CONFIRMED] User {callback.from_user.id} proceeding to specialist selection")
+    logger.info(f"[CONSENT_CONFIRMED] User {callback.from_user.id} clicked 'Согласие получено'")
     
-    # Сразу показываем выбор специалиста, редактируя текущее сообщение
+    # Проверяем, есть ли согласие (на всякий случай)
+    user_has_consent = await get_user_consent(db_session, callback.from_user.id)
+    
+    if not user_has_consent:
+        logger.warning(f"[CONSENT_CONFIRMED] User {callback.from_user.id} has no consent")
+        await callback.answer(
+            "Необходимо дать согласие на обработку персональных данных. "
+            "Без этого записаться не получится.",
+            show_alert=True,
+        )
+        return
+    
+    # Согласие есть - показываем выбор специалиста, редактируя текущее сообщение
     try:
         specialists = await get_active_specialists(db_session)
         if not specialists:
@@ -311,9 +334,21 @@ async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_se
 
 @router.callback_query(lambda c: c.data == "go_to_specialist")
 async def cb_go_to_specialist(callback: CallbackQuery, state: FSMContext, db_session):
-    logger.info(f"[GO_TO_SPECIALIST] User {callback.from_user.id} proceeding to specialist selection")
+    logger.info(f"[GO_TO_SPECIALIST] User {callback.from_user.id} clicked 'Выбор специалиста'")
     
-    # Сразу показываем выбор специалиста, редактируя текущее сообщение
+    # Проверяем, есть ли согласие
+    user_has_consent = await get_user_consent(db_session, callback.from_user.id)
+    
+    if not user_has_consent:
+        logger.warning(f"[GO_TO_SPECIALIST] User {callback.from_user.id} has no consent")
+        await callback.answer(
+            "Необходимо дать согласие на обработку персональных данных. "
+            "Без этого записаться не получится.",
+            show_alert=True,
+        )
+        return
+    
+    # Согласие есть - показываем выбор специалиста
     try:
         specialists = await get_active_specialists(db_session)
         if not specialists:
