@@ -283,7 +283,7 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
 async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_session):
     logger.info(f"[CONSENT_CONFIRMED] User {callback.from_user.id} proceeding to specialist selection")
     
-    # Редактируем сообщение и сразу показываем выбор специалиста
+    # Сразу показываем выбор специалиста, редактируя текущее сообщение
     try:
         specialists = await get_active_specialists(db_session)
         if not specialists:
@@ -305,6 +305,36 @@ async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_se
         await callback.answer()
         return
     await callback.answer()
+    await state.clear()
+
+
+@router.callback_query(lambda c: c.data == "go_to_specialist")
+async def cb_go_to_specialist(callback: CallbackQuery, state: FSMContext, db_session):
+    logger.info(f"[GO_TO_SPECIALIST] User {callback.from_user.id} proceeding to specialist selection")
+    
+    # Сразу показываем выбор специалиста, редактируя текущее сообщение
+    try:
+        specialists = await get_active_specialists(db_session)
+        if not specialists:
+            logger.warning(f"[GO_TO_SPECIALIST] No specialists available for user {callback.from_user.id}")
+            await callback.message.edit_text(
+                text="Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером.",
+            )
+            return
+        
+        keyboard = await build_specialist_keyboard(specialists)
+        await callback.message.edit_text(
+            text="👨‍⚕️ Выберите специалиста:\n\n"
+            "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
+            "и мы поможем подобрать подходящего специалиста.",
+            reply_markup=keyboard,
+        )
+    except Exception as e:
+        logger.error(f"[GO_TO_SPECIALIST] Error editing message: {e}")
+        await callback.answer()
+        return
+    await callback.answer()
+    await state.clear()
 
 
 @router.callback_query(lambda c: c.data == "consent_revoked")
