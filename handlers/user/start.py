@@ -395,14 +395,6 @@ async def cb_consent_revoked(callback: CallbackQuery, state: FSMContext, db_sess
         return
     await callback.answer()
     await state.clear()
-
-    specialists = await get_active_specialists(db_session)
-    if not specialists:
-        logger.warning(f"[CONSENT] No specialists available for user {user_id}")
-        await callback.message.answer(
-            "Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером."
-        )
-        await state.clear()
         return
 
     logger.info(f"[CONSENT] Showing {len(specialists)} specialists to user {user_id}")
