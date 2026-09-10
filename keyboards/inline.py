@@ -26,7 +26,11 @@ def build_consent_keyboard(has_consent: bool = False) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     if has_consent:
-        # Если согласие уже дано - показываем кнопку отмены
+        # Если согласие уже дано - показываем кнопку отмены и выбора специалиста
+        builder.button(
+            text="🧑‍🔬 Запись на консультацию",
+            callback_data="consent_confirmed",
+        )
         builder.button(
             text="❌ Отменить согласие",
             callback_data="consent_revoked",

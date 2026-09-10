@@ -230,10 +230,11 @@ async def cb_start_booking(callback: CallbackQuery, state: FSMContext, db_sessio
     
     if user_has_consent:
         logger.info(f"[START_BOOKING] User {callback.from_user.id} already gave consent, showing specialist selection")
-        # Показываем сообщение о том что согласие получено и кнопку выбора специалиста
+        # Показываем сообщение о том что согласие получено и кнопку записи
         await callback.message.answer(
             "📋 Ваше согласие на обработку персональных данных уже получено.\n\n"
-            "Вы можете отозвать согласие нажав соответствующую кнопку.",
+            "Вы можете отозвать согласие нажав соответствующую кнопку.\n\n"
+            "Для записи к специалисту нажмите кнопку ниже:",
             reply_markup=build_consent_keyboard(has_consent=True),
         )
     else:
@@ -267,9 +268,8 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
 
     # Редактируем текущее сообщение и меняем кнопки
     try:
-        await callback.edit_message_text(
-            "✅ Спасибо! Ваше согласие получено.\n\n"
-            "Теперь вы можете записаться на консультацию.",
+        await callback.message.edit_text(
+            text="✅ Спасибо! Ваше согласие получено.\n\nТеперь вы можете записаться на консультацию.",
             reply_markup=build_consent_confirmed_keyboard(),
         )
     except Exception as e:
@@ -288,14 +288,14 @@ async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_se
         specialists = await get_active_specialists(db_session)
         if not specialists:
             logger.warning(f"[CONSENT_CONFIRMED] No specialists available for user {callback.from_user.id}")
-            await callback.edit_message_text(
-                "Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером.",
+            await callback.message.edit_text(
+                text="Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером.",
             )
             return
         
         keyboard = await build_specialist_keyboard(specialists)
-        await callback.edit_message_text(
-            "👨‍⚕️ Выберите специалиста:\n\n"
+        await callback.message.edit_text(
+            text="👨‍⚕️ Выберите специалиста:\n\n"
             "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
             "и мы поможем подобрать подходящего специалиста.",
             reply_markup=keyboard,
@@ -318,8 +318,8 @@ async def cb_consent_revoked(callback: CallbackQuery, state: FSMContext, db_sess
     
     # Редактируем сообщение и возвращаем кнопку согласия
     try:
-        await callback.edit_message_text(
-            "⚠️ Ваше согласие на обработку персональных данных отозвано.\n\n"
+        await callback.message.edit_text(
+            text="⚠️ Ваше согласие на обработку персональных данных отозвано.\n\n"
             "Для продолжения записи, пожалуйста, дайте согласие заново.",
             reply_markup=build_consent_keyboard(has_consent=False),
         )
