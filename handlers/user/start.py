@@ -16,6 +16,7 @@ from keyboards.inline import (
     build_welcome_keyboard, 
     build_consent_keyboard, 
     build_consent_confirmed_keyboard,
+    build_consent_revoked_keyboard,
     build_specialist_keyboard,
 )
 
@@ -346,12 +347,12 @@ async def cb_consent_revoked(callback: CallbackQuery, state: FSMContext, db_sess
     from database.repositories import revoke_consent
     await revoke_consent(db_session, user_id)
     
-    # Редактируем сообщение и возвращаем кнопку согласия
+    # Редактируем сообщение и возвращаем кнопку согласия (без перехода к специалисту)
     try:
         await callback.message.edit_text(
             text="⚠️ Ваше согласие на обработку персональных данных отозвано.\n\n"
             "Для продолжения записи, пожалуйста, дайте согласие заново.",
-            reply_markup=build_consent_keyboard(has_consent=False),
+            reply_markup=build_consent_revoked_keyboard(),
         )
     except Exception as e:
         logger.error(f"[CONSENT_REVOKED] Error editing message: {e}")

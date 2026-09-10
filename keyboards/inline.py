@@ -36,12 +36,29 @@ def build_consent_keyboard(has_consent: bool = False) -> InlineKeyboardMarkup:
             callback_data="consent_revoked",
         )
     else:
-        # Если согласие ещё не дано
+        # Если согласие ещё не дано - только кнопка согласия
         builder.button(
             text="Согласен(а)",
             callback_data="consent_given",
         )
     
+    builder.row(
+        InlineKeyboardButton(text="📄 Политика конфиденциальности", callback_data="show_policy"),
+    )
+    builder.adjust(1, 1)
+    return builder.as_markup()
+
+
+def build_consent_revoked_keyboard() -> InlineKeyboardMarkup:
+    """
+    Строит клавиатуру после отмены согласия.
+    Содержит только кнопку согласия, без перехода к специалисту.
+    """
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Согласен(а)",
+        callback_data="consent_given",
+    )
     builder.row(
         InlineKeyboardButton(text="📄 Политика конфиденциальности", callback_data="show_policy"),
     )
