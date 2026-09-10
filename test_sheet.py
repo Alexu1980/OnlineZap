@@ -70,6 +70,7 @@ except FileNotFoundError:
 except Exception as e:
     print(f"✗ Неожиданная ошибка: {e}")
 
+
     import traceback
     traceback.print_exc()
     sys.exit(1)
