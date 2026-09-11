@@ -238,6 +238,8 @@ async def cb_start_booking(callback: CallbackQuery, state: FSMContext, db_sessio
             "Для записи к специалисту нажмите кнопку ниже:",
             reply_markup=build_consent_keyboard(has_consent=True),
         )
+        # Сразу показываем выбор специалиста
+        await _show_specialist_selection_from_button(callback, state, db_session)
     else:
         logger.info(f"[START_BOOKING] User {callback.from_user.id} needs to give consent")
         await state.set_state(ConsentFSM.AWAITING_CONSENT_DECISION)
@@ -273,7 +275,7 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
     await save_consent(db_session, user_id)
     logger.info(f"[CONSENT] Consent saved for user {user_id}")
 
-    # Редактируем текущее сообщение и показываем кнопку подтверждения
+    # Редактируем текущее сообщение и показываем кнопку отмены согласия
     try:
         await callback.message.edit_text(
             text="✅ Спасибо! Ваше согласие получено.\n\nТеперь вы можете записаться на консультацию.",
@@ -291,43 +293,29 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
     logger.info(f"[CONSENT] State cleared for user {user_id}")
 
 
-@router.callback_query(lambda c: c.data == "consent_confirmed")
-async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_session):
-    logger.info(f"[CONSENT_CONFIRMED] User {callback.from_user.id} clicked 'Согласие получено'")
+@router.callback_query(lambda c: c.data == "consent_revoke_check")
+async def cb_consent_revoke_check(callback: CallbackQuery, state: FSMContext, db_session):
+    logger.info(f"[CONSENT_REVOKE_CHECK] User {callback.from_user.id} clicked 'Отменить?'")
+    user_id = callback.from_user.id
     
-    # Проверяем, есть ли согласие (на всякий случай)
-    user_has_consent = await get_user_consent(db_session, callback.from_user.id)
+    # Удаляем запись о согласии из БД
+    from database.repositories import revoke_consent
+    await revoke_consent(db_session, user_id)
+    logger.info(f"[CONSENT_REVOKE_CHECK] Consent revoked for user {user_id}")
     
-    if not user_has_consent:
-        logger.warning(f"[CONSENT_CONFIRMED] User {callback.from_user.id} has no consent")
-        await callback.answer(
-            "Необходимо дать согласие на обработку персональных данных. "
-            "Без этого записаться не получится.",
-            show_alert=True,
-        )
-        return
-    
-    # Согласие есть - показываем выбор специалиста, редактируя текущее сообщение
+    # Редактируем сообщение и возвращаем кнопку согласия
     try:
-        specialists = await get_active_specialists(db_session)
-        if not specialists:
-            logger.warning(f"[CONSENT_CONFIRMED] No specialists available for user {callback.from_user.id}")
-            await callback.message.edit_text(
-                text="Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером.",
-            )
-            return
-        
-        keyboard = await build_specialist_keyboard(specialists)
         await callback.message.edit_text(
-            text="👨‍⚕️ Выберите специалиста:\n\n"
-            "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
-            "и мы поможем подобрать подходящего специалиста.",
-            reply_markup=keyboard,
+            text="⚠️ Ваше согласие на обработку персональных данных отозвано.\n\n"
+            "Для продолжения записи, пожалуйста, дайте согласие заново.",
+            reply_markup=build_consent_revoked_keyboard(),
         )
+        logger.info(f"[CONSENT_REVOKE_CHECK] Message edited for user {user_id}")
     except Exception as e:
-        logger.error(f"[CONSENT_CONFIRMED] Error editing message: {e}")
+        logger.error(f"[CONSENT_REVOKE_CHECK] Error editing message: {e}")
         await callback.answer()
         return
+    
     await callback.answer()
     await state.clear()
 
@@ -373,6 +361,32 @@ async def cb_go_to_specialist(callback: CallbackQuery, state: FSMContext, db_ses
     await state.clear()
 
 
+async def _show_specialist_selection_from_button(callback: CallbackQuery, state: FSMContext, db_session):
+    """Показ выбора специалиста из кнопки 'Запись на консультацию'."""
+    try:
+        specialists = await get_active_specialists(db_session)
+        if not specialists:
+            logger.warning(f"[SPECIALIST] No specialists available for user {callback.from_user.id}")
+            await callback.message.edit_text(
+                text="Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером.",
+            )
+            return
+        
+        keyboard = await build_specialist_keyboard(specialists)
+        await callback.message.edit_text(
+            text="👨‍⚕️ Выберите специалиста:\n\n"
+            "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
+            "и мы поможем подобрать подходящего специалиста.",
+            reply_markup=keyboard,
+        )
+    except Exception as e:
+        logger.error(f"[SPECIALIST] Error editing message: {e}")
+        await callback.answer()
+        return
+    await callback.answer()
+    await state.clear()
+
+
 @router.callback_query(lambda c: c.data == "consent_revoked")
 async def cb_consent_revoked(callback: CallbackQuery, state: FSMContext, db_session):
     logger.info(f"[CONSENT_REVOKED] User {callback.from_user.id} revoked consent")
@@ -395,17 +409,6 @@ async def cb_consent_revoked(callback: CallbackQuery, state: FSMContext, db_sess
         return
     await callback.answer()
     await state.clear()
-        return
-
-    logger.info(f"[CONSENT] Showing {len(specialists)} specialists to user {user_id}")
-    keyboard = await build_specialist_keyboard(specialists)
-    await callback.message.answer(
-        "👨‍⚕️ Выберите специалиста:\n\n"
-        "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
-        "и мы поможем подобрать подходящего специалиста.",
-        reply_markup=keyboard,
-    )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "start_menu")
