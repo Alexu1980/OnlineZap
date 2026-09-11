@@ -48,6 +48,7 @@ from handlers.user import cancel as user_cancel
 from handlers.user import personal_cabinet as user_personal_cabinet
 from handlers.admin import bookings as admin_bookings
 from handlers.admin import sheets as admin_sheets
+from handlers.admin import admin_view as admin_view_router
 
 
 async def cleanup_expired_reservations_task():
@@ -162,6 +163,7 @@ def register_all_handlers(dp: Dispatcher):
     # Admin routers
     dp.include_router(admin_bookings.router)
     dp.include_router(admin_sheets.router)
+    dp.include_router(admin_view_router.router)
 
     logger.info("Все обработчики зарегистрированы")
 
