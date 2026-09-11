@@ -69,16 +69,16 @@ def build_consent_revoked_keyboard() -> InlineKeyboardMarkup:
 def build_consent_confirmed_keyboard() -> InlineKeyboardMarkup:
     """
     Строит клавиатуру после получения согласия.
-    Содержит кнопку подтверждения и выбора специалиста.
+    Содержит кнопку отмены согласия и выбора специалиста.
     """
     builder = InlineKeyboardBuilder()
     builder.button(
-        text="✅ Согласие получено",
-        callback_data="consent_confirmed",
-    )
-    builder.button(
         text="🧑‍🔬 Выбор специалиста",
         callback_data="go_to_specialist",
+    )
+    builder.button(
+        text="✅ Согласие получено. Отменить?",
+        callback_data="consent_revoke_check",
     )
     builder.adjust(1, 1)
     return builder.as_markup()
