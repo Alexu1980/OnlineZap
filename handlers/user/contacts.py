@@ -51,7 +51,7 @@ async def handle_manual_phone_prompt(message: Message, state: FSMContext):
     logger.info(f"[PHONE] User {message.from_user.id} chose manual input")
     await message.answer(
         "Введите номер телефона (например: +79644203553):",
-        reply_markup=ReplyKeyboardRemove(resize_keyboard=True),
+        remove_keyboard=True,
     )
 
 
@@ -85,7 +85,7 @@ async def handle_phone_manual(message: Message, state: FSMContext):
         # Удаляем ReplyKeyboard
         await message.answer(
             "✓ Номер принят!",
-            reply_markup=ReplyKeyboardRemove(),
+            remove_keyboard=True,
         )
         await _proceed_to_additional(message, state)
     else:
@@ -93,7 +93,7 @@ async def handle_phone_manual(message: Message, state: FSMContext):
         await message.answer(
             "Номер введён некорректно. Введите номер в формате +7XXXXXXXXXX\n"
             "Примеры: +79644203553 или 89644203553",
-            reply_markup=ReplyKeyboardRemove(),
+            remove_keyboard=True,
         )
 
 
