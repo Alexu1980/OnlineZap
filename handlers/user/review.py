@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
 
 from handlers.user.start import BookingFSM
@@ -73,6 +74,27 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             if not specialist:
                 raise Exception("Специалист не найден")
             
+            # Проверяем, есть ли уже запись к этому же специалисту в этот же день
+            same_spec_today = await db.execute(
+                select(Booking).where(
+                    Booking.user_telegram_id == user_id,
+                    Booking.consultation_date == date_str,
+                    Booking.specialist_id == specialist_id,
+                    Booking.status == "Подтверждена",
+                )
+            )
+            same_spec_booking = same_spec_today.scalars().first()
+            
+            if same_spec_booking:
+                logger.warning(f"[CONFIRM] User {user_id} already booked with {specialist.name} on {date_str}")
+                await callback.message.answer(
+                    f"⚠️ Вы уже записаны к {specialist.name} на {date_str}.\n\n"
+                    f"Посещение одного специалиста в один день не требуется.\n\n"
+                    f"Пожалуйста, выберите другую дату или другого специалиста.",
+                )
+                await state.clear()
+                return
+            
             # Проверяем, есть ли уже запись на это время к другому специалисту
             conflict_booking = await db.execute(
                 select(Booking).where(
@@ -87,12 +109,25 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             
             if conflicting:
                 logger.warning(f"[CONFIRM] Time conflict for user {user_id}: already booked with {conflicting.specialist_name}")
+                
+                kb = InlineKeyboardBuilder()
+                kb.button(
+                    text="⬅️ Назад к выбору времени",
+                    callback_data="back_to_time",
+                )
+                kb.button(
+                    text=f"❌ Отменить запись #{conflicting.id}",
+                    callback_data=f"cancel_{conflicting.id}",
+                )
+                kb.adjust(1, 1)
+                
                 await callback.message.answer(
                     f"⚠️ У вас уже есть запись на это время:\n\n"
                     f"👨‍⚕️ {conflicting.specialist_name}\n"
                     f"📅 {date_str} в {time_str}\n\n"
                     f"Вы не можете быть у двух специалистов одновременно.\n\n"
                     f"Пожалуйста, выберите другое время или отмените текущую запись.",
+                    reply_markup=kb.as_markup(),
                 )
                 await state.clear()
                 return

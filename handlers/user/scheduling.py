@@ -126,6 +126,35 @@ async def cb_back_to_date(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+@router.callback_query(lambda c: c.data == "back_to_time")
+async def cb_back_to_time(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[BACK] User {callback.from_user.id} went back to time selection")
+    data = await state.get_data()
+    specialist_id = data.get("specialist_id")
+    date_str = data.get("selected_date")
+    
+    if not specialist_id or not date_str:
+        logger.warning(f"[BACK] Missing specialist_id or date for user {callback.from_user.id}")
+        await callback.answer("Ошибка. Начните заново: /start")
+        await state.clear()
+        return
+    
+    async with AsyncSessionLocal() as db:
+        slots = await get_available_slots(db, specialist_id, datetime.strptime(date_str, "%Y-%m-%d"))
+    
+    if not slots:
+        await callback.message.answer("⚠️ На эту дату нет доступных слотов.")
+        return
+    
+    keyboard = build_time_keyboard(slots, back_callback="back_to_date")
+    await callback.message.answer(
+        f"🕐 Выберите время консультации:\n\n"
+        f"{get_date_display(date_str)}",
+        reply_markup=keyboard,
+    )
+    await callback.answer()
+
+
 @router.callback_query(lambda c: c.data.startswith("time_"))
 async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     slot_key = callback.data.split("_", 1)[1]
