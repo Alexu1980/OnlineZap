@@ -88,7 +88,6 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             if same_spec_booking:
                 logger.warning(f"[CONFIRM] User {user_id} already booked with {specialist.name} on {date_str}")
                 
-                from aiogram.utils.keyboard import InlineKeyboardBuilder
                 kb = InlineKeyboardBuilder()
                 kb.button(
                     text="📅 Выбрать другую дату",
@@ -106,7 +105,8 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
                     f"Пожалуйста, выберите другую дату или другого специалиста.",
                     reply_markup=kb.as_markup(),
                 )
-                await state.clear()
+                # Не очищаем state, чтобы кнопки возврата работали
+                # await state.clear()  <-- удаляем
                 return
             
             # Проверяем, есть ли уже запись на это время к другому специалисту
@@ -143,7 +143,8 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
                     f"Пожалуйста, выберите другое время или отмените текущую запись.",
                     reply_markup=kb.as_markup(),
                 )
-                await state.clear()
+                # Не очищаем state, чтобы кнопка возврата работала
+                # await state.clear()  <-- удаляем
                 return
             
             # Создаём booking
