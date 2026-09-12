@@ -165,15 +165,15 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(user_cancel.router)
     dp.include_router(user_personal_cabinet.router)
 
-    # Admin routers
-    dp.include_router(admin_bookings.router)
-    logger.info("Admin bookings router registered")
-    dp.include_router(admin_sheets.router)
-    logger.info("Admin sheets router registered")
+    # Admin routers (порядок важен! - специфичные команды ДО F.text)
     dp.include_router(admin_view_router.router)
     logger.info("Admin view router registered")
     dp.include_router(test_base_router.router)
     logger.info("Test base router registered")
+    dp.include_router(admin_bookings.router)
+    logger.info("Admin bookings router registered")
+    dp.include_router(admin_sheets.router)
+    logger.info("Admin sheets router registered")
 
     logger.info("Все обработчики зарегистрированы")
 
