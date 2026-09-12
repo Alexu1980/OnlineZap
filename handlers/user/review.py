@@ -1,7 +1,9 @@
 import logging
+from datetime import datetime, timezone
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from sqlalchemy import select
 
 from handlers.user.start import BookingFSM
 from keyboards.inline import build_review_keyboard
@@ -70,6 +72,30 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             specialist = await get_specialist_by_id(db, specialist_id)
             if not specialist:
                 raise Exception("Специалист не найден")
+            
+            # Проверяем, есть ли уже запись на это время к другому специалисту
+            conflict_booking = await db.execute(
+                select(Booking).where(
+                    Booking.user_telegram_id == user_id,
+                    Booking.consultation_date == date_str,
+                    Booking.consultation_time == time_str,
+                    Booking.specialist_id != specialist_id,
+                    Booking.status == "Подтверждена",
+                )
+            )
+            conflicting = conflict_booking.scalars().first()
+            
+            if conflicting:
+                logger.warning(f"[CONFIRM] Time conflict for user {user_id}: already booked with {conflicting.specialist_name}")
+                await callback.message.answer(
+                    f"⚠️ У вас уже есть запись на это время:\n\n"
+                    f"👨‍⚕️ {conflicting.specialist_name}\n"
+                    f"📅 {date_str} в {time_str}\n\n"
+                    f"Вы не можете быть у двух специалистов одновременно.\n\n"
+                    f"Пожалуйста, выберите другое время или отмените текущую запись.",
+                )
+                await state.clear()
+                return
             
             # Создаём booking
             booking = Booking(

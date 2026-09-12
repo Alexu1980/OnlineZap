@@ -231,14 +231,7 @@ async def cb_start_booking(callback: CallbackQuery, state: FSMContext, db_sessio
     
     if user_has_consent:
         logger.info(f"[START_BOOKING] User {callback.from_user.id} already gave consent, showing specialist selection")
-        # Показываем сообщение о том что согласие получено и кнопку записи
-        await callback.message.answer(
-            "📋 Ваше согласие на обработку персональных данных уже получено.\n\n"
-            "Вы можете отозвать согласие нажав соответствующую кнопку.\n\n"
-            "Для записи к специалисту нажмите кнопку ниже:",
-            reply_markup=build_consent_keyboard(has_consent=True),
-        )
-        # Сразу показываем выбор специалиста
+        # Сразу показываем выбор специалиста без дополнительных сообщений
         await _show_specialist_selection_from_button(callback, state, db_session)
     else:
         logger.info(f"[START_BOOKING] User {callback.from_user.id} needs to give consent")
