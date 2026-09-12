@@ -180,7 +180,8 @@ async def cb_back_to_date_from_conflict(callback: CallbackQuery, state: FSMConte
 @router.callback_query(lambda c: c.data == "back_to_specialist_from_conflict")
 async def cb_back_to_specialist_from_conflict(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[BACK] User {callback.from_user.id} went back to specialist selection from conflict")
-    specialists = await get_active_specialists()
+    async with AsyncSessionLocal() as db:
+        specialists = await get_active_specialists(db)
     keyboard = await build_specialist_keyboard(specialists)
     await callback.message.answer(
         "👨‍⚕️ Выберите специалиста:",
