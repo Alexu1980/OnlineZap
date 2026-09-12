@@ -26,6 +26,7 @@ async def handle_name(message: Message, state: FSMContext):
             "Спасибо! Теперь введите номер телефона:\n\n"
             "Вы можете поделиться номером одним нажатием или ввести вручную.",
             reply_markup=kb,
+            remove_keyboard=True,
         )
     else:
         await message.answer(
@@ -81,7 +82,7 @@ async def handle_phone_manual(message: Message, state: FSMContext):
             phone = "+" + phone
         logger.info(f"[PHONE] Valid phone: {phone}")
         await state.update_data(user_phone=phone)
-        # Скрываем клавиатуру после успешного ввода
+        # Удаляем ReplyKeyboard
         await message.answer(
             "✓ Номер принят!",
             reply_markup=ReplyKeyboardRemove(),
@@ -91,7 +92,8 @@ async def handle_phone_manual(message: Message, state: FSMContext):
         logger.warning(f"[PHONE] Invalid phone format: {phone} (digits: {phone_digits}, len: {len(phone_digits)})")
         await message.answer(
             "Номер введён некорректно. Введите номер в формате +7XXXXXXXXXX\n"
-            "Примеры: +79644203553 или 89644203553"
+            "Примеры: +79644203553 или 89644203553",
+            reply_markup=ReplyKeyboardRemove(),
         )
 
 
