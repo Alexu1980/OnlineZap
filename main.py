@@ -49,6 +49,7 @@ from handlers.user import personal_cabinet as user_personal_cabinet
 from handlers.admin import bookings as admin_bookings
 from handlers.admin import sheets as admin_sheets
 from handlers.admin import admin_view as admin_view_router
+from handlers.admin import test_base as test_base_router
 
 
 async def cleanup_expired_reservations_task():
@@ -162,8 +163,13 @@ def register_all_handlers(dp: Dispatcher):
 
     # Admin routers
     dp.include_router(admin_bookings.router)
+    logger.info("Admin bookings router registered")
     dp.include_router(admin_sheets.router)
+    logger.info("Admin sheets router registered")
     dp.include_router(admin_view_router.router)
+    logger.info("Admin view router registered")
+    dp.include_router(test_base_router.router)
+    logger.info("Test base router registered")
 
     logger.info("Все обработчики зарегистрированы")
 
