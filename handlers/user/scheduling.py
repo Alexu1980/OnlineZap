@@ -17,6 +17,7 @@ from database.repositories import (
 from exceptions.booking import SlotAlreadyReserved, SlotAlreadyBooked
 from utils.helpers import get_future_dates, get_date_display
 from keyboards.inline import build_date_keyboard, build_time_keyboard, build_specialist_keyboard
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from handlers.user.start import BookingFSM
 from config.settings import settings
 
@@ -189,6 +190,15 @@ async def cb_back_to_specialist_from_conflict(callback: CallbackQuery, state: FS
     await callback.answer()
 
 
+@router.callback_query(lambda c: c.data == "skip_additional")
+async def cb_skip_additional(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[SKIP_ADDITIONAL] User {callback.from_user.id} skipped additional info")
+    from handlers.user.review import cb_confirm_booking
+    # Переходим к подтверждению записи
+    await state.set_state(BookingFSM.AWAITING_REVIEW)
+    await cb_confirm_booking(callback, state)
+
+
 @router.callback_query(lambda c: c.data.startswith("time_"))
 async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     slot_key = callback.data.split("_", 1)[1]
@@ -273,10 +283,13 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
         await state.set_state(BookingFSM.AWAITING_ADDITIONAL)
         await callback.answer("Слот зарезервирован!")
         await callback.message.answer(
-            f"✏️ Введите дополнительную информацию (необязательно):\n\n"
-            f"👤 Имя: {user_name}\n"
-            f"📱 Телефон: {user_phone}\n\n"
-            f"Если вам нужно что-то добавить — напишите ниже, или просто нажмите кнопку:",
+            "📝 Необязательный вопрос:\n\n"
+            "Есть ли что-то, что вы хотели бы сообщить специалисту перед консультацией?\n\n"
+            "Вы можете написать или нажать кнопку ниже:",
+            reply_markup=InlineKeyboardBuilder().button(
+                text="⏭️ Пропустить",
+                callback_data="skip_additional",
+            ).as_markup(),
         )
     else:
         # Вводим имя и телефон как обычно
