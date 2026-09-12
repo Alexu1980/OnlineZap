@@ -95,10 +95,10 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             await db.commit()
             logger.info(f"[CONFIRM] Booking #{booking_id} COMMITTED to database!")
             
-            # Записываем в Google Sheets (не критично)
+            # Записываем в Google Sheets
             try:
                 sheet_service = SheetService()
-                await sheet_service.append_booking({
+                row_number = await sheet_service.append_booking({
                     "id": booking_id,
                     "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
                     "user_name": name,
@@ -111,7 +111,14 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
                     "status": "Подтверждена",
                     "manager_comment": additional_info or "",
                 })
-                logger.info(f"[CONFIRM] Booking #{booking_id} saved to Google Sheets")
+                
+                # Сохраняем номер строки в booking
+                if row_number and row_number > 0:
+                    booking.google_sheet_row = row_number
+                    await db.commit()
+                    logger.info(f"[CONFIRM] Booking #{booking_id} saved to Google Sheets row {row_number}")
+                else:
+                    logger.warning(f"[CONFIRM] Google Sheets returned invalid row number: {row_number}")
             except Exception as e:
                 logger.warning(f"[CONFIRM] Google Sheets error (non-fatal): {e}")
             
