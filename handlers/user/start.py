@@ -293,6 +293,35 @@ async def cb_consent_given(callback: CallbackQuery, state: FSMContext, db_sessio
     logger.info(f"[CONSENT] State cleared for user {user_id}")
 
 
+@router.callback_query(lambda c: c.data == "consent_confirmed")
+async def cb_consent_confirmed(callback: CallbackQuery, state: FSMContext, db_session):
+    logger.info(f"[CONSENT_CONFIRMED] User {callback.from_user.id} clicked 'Запись на консультацию'")
+    
+    # Показываем выбор специалиста
+    try:
+        specialists = await get_active_specialists(db_session)
+        if not specialists:
+            logger.warning(f"[CONSENT_CONFIRMED] No specialists available for user {callback.from_user.id}")
+            await callback.message.edit_text(
+                text="Специалисты временно недоступны. Пожалуйста, свяжитесь с менеджером.",
+            )
+            return
+        
+        keyboard = await build_specialist_keyboard(specialists)
+        await callback.message.edit_text(
+            text="👨‍⚕️ Выберите специалиста:\n\n"
+            "Если вы не уверены, кого выбрать — нажмите кнопку ниже, "
+            "и мы поможем подобрать подходящего специалиста.",
+            reply_markup=keyboard,
+        )
+    except Exception as e:
+        logger.error(f"[CONSENT_CONFIRMED] Error editing message: {e}")
+        await callback.answer()
+        return
+    await callback.answer()
+    await state.clear()
+
+
 @router.callback_query(lambda c: c.data == "consent_revoke_check")
 async def cb_consent_revoke_check(callback: CallbackQuery, state: FSMContext, db_session):
     logger.info(f"[CONSENT_REVOKE_CHECK] User {callback.from_user.id} clicked 'Отменить?'")
