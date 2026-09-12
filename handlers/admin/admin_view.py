@@ -15,7 +15,7 @@ router = Router()
 @router.message(Command("admin_view"))
 async def cmd_admin_view(message: Message):
     """Просмотр всех записей в базе данных (только для админов)."""
-    logger.info(f"[ADMIN_VIEW] Command received from user {message.from_user.id}")
+    logger.info(f"[ADMIN_VIEW] === COMMAND RECEIVED === User {message.from_user.id}")
     
     # Проверка что сообщение от админа
     admin_ids = [int(admin_id) for admin_id in settings.admin_ids_csv.split(',')]

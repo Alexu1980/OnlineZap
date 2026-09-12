@@ -77,23 +77,21 @@ async def cb_admin_comment(callback: CallbackQuery, state: FSMContext, db_sessio
 async def handle_admin_comment(message: Message, state: FSMContext, db_session):
     """Обработка комментария менеджера."""
     # Игнорируем команды (начинаются с /)
-    if message.text and message.text.startswith("/"):
-        return
-    
-    data = await state.get_data()
-    booking_id = data.get("admin_comment_booking_id")
+    if not message.text or not message.text.startswith("/"):
+        data = await state.get_data()
+        booking_id = data.get("admin_comment_booking_id")
 
-    if booking_id:
-        await update_manager_comment(db_session, booking_id, message.text)
+        if booking_id:
+            await update_manager_comment(db_session, booking_id, message.text)
 
-        from services.sheet_service import SheetService
-        sheet_service = SheetService()
-        booking = await get_booking_by_id(db_session, booking_id)
-        if booking and booking.google_sheet_row:
-            sheet_service.update_booking_comment(booking.google_sheet_row, message.text)
+            from services.sheet_service import SheetService
+            sheet_service = SheetService()
+            booking = await get_booking_by_id(db_session, booking_id)
+            if booking and booking.google_sheet_row:
+                sheet_service.update_booking_comment(booking.google_sheet_row, message.text)
 
-        await message.answer(f"✅ Комментарий для записи #{booking_id} сохранён.")
-        await state.clear()
+            await message.answer(f"✅ Комментарий для записи #{booking_id} сохранён.")
+            await state.clear()
 
 
 @router.callback_query(lambda c: c.data.startswith("admin_bookings_"))

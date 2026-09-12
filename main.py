@@ -47,9 +47,13 @@ from handlers.user import reschedule as user_reschedule
 from handlers.user import cancel as user_cancel
 from handlers.user import personal_cabinet as user_personal_cabinet
 from handlers.admin import bookings as admin_bookings
+logger.info("Imported admin_bookings router")
 from handlers.admin import sheets as admin_sheets
+logger.info("Imported admin_sheets router")
 from handlers.admin import admin_view as admin_view_router
+logger.info("Imported admin_view router")
 from handlers.admin import test_base as test_base_router
+logger.info("Imported test_base router")
 
 
 async def cleanup_expired_reservations_task():
