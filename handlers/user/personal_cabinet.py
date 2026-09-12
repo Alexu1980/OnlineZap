@@ -26,7 +26,7 @@ async def cb_personal_cabinet(callback: CallbackQuery):
     async with AsyncSessionLocal() as db:
         # Получаем все записи (не только подтверждённые)
         from database.repositories import get_all_bookings
-        all_bookings = await get_all_bookings(db, limit=50)
+        all_bookings = await get_all_bookings(db)
         user_bookings = [b for b in all_bookings if b.user_telegram_id == user_id]
     
     if not user_bookings:
@@ -105,7 +105,7 @@ async def cb_past_bookings(callback: CallbackQuery):
     
     async with AsyncSessionLocal() as db:
         from database.repositories import get_all_bookings
-        all_bookings = await get_all_bookings(db, limit=50)
+        all_bookings = await get_all_bookings(db)
         user_bookings = [b for b in all_bookings if b.user_telegram_id == user_id]
     
     from datetime import datetime, timezone
