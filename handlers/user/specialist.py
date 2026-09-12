@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.repositories import get_active_specialists, get_bookings_by_user
-from keyboards.inline import build_specialist_keyboard
+from keyboards.inline import build_specialist_keyboard, build_date_keyboard
 from handlers.user.start import BookingFSM
 
 logger = logging.getLogger(__name__)
