@@ -76,6 +76,10 @@ async def cb_admin_comment(callback: CallbackQuery, state: FSMContext, db_sessio
 @router.message(F.text)
 async def handle_admin_comment(message: Message, state: FSMContext, db_session):
     """Обработка комментария менеджера."""
+    # Игнорируем команды (начинаются с /)
+    if message.text and message.text.startswith("/"):
+        return
+    
     data = await state.get_data()
     booking_id = data.get("admin_comment_booking_id")
 
