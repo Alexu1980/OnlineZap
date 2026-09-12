@@ -87,10 +87,23 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             
             if same_spec_booking:
                 logger.warning(f"[CONFIRM] User {user_id} already booked with {specialist.name} on {date_str}")
+                
+                kb = InlineKeyboardBuilder()
+                kb.button(
+                    text="📅 Выбрать другую дату",
+                    callback_data="back_to_date_from_conflict",
+                )
+                kb.button(
+                    text="👨‍⚕️ Выбрать другого специалиста",
+                    callback_data="back_to_specialist_from_conflict",
+                )
+                kb.adjust(1, 1)
+                
                 await callback.message.answer(
                     f"⚠️ Вы уже записаны к {specialist.name} на {date_str}.\n\n"
                     f"Посещение одного специалиста в один день не требуется.\n\n"
                     f"Пожалуйста, выберите другую дату или другого специалиста.",
+                    reply_markup=kb.as_markup(),
                 )
                 await state.clear()
                 return

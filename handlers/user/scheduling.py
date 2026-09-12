@@ -16,7 +16,7 @@ from database.repositories import (
 )
 from exceptions.booking import SlotAlreadyReserved, SlotAlreadyBooked
 from utils.helpers import get_future_dates, get_date_display
-from keyboards.inline import build_date_keyboard, build_time_keyboard
+from keyboards.inline import build_date_keyboard, build_time_keyboard, build_specialist_keyboard
 from handlers.user.start import BookingFSM
 from config.settings import settings
 
@@ -155,6 +155,40 @@ async def cb_back_to_time(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+@router.callback_query(lambda c: c.data == "back_to_date_from_conflict")
+async def cb_back_to_date_from_conflict(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[BACK] User {callback.from_user.id} went back to date selection from conflict")
+    data = await state.get_data()
+    specialist_id = data.get("specialist_id")
+    
+    if not specialist_id:
+        logger.warning(f"[BACK] Missing specialist_id for user {callback.from_user.id}")
+        await callback.answer("Ошибка. Начните заново: /start")
+        await state.clear()
+        return
+    
+    dates = await get_available_dates(specialist_id)
+    keyboard = build_date_keyboard(dates, back_callback="back_to_specialist")
+    await callback.message.answer(
+        "📅 Выберите дату консультации:",
+        reply_markup=keyboard,
+    )
+    await callback.answer()
+
+
+@router.callback_query(lambda c: c.data == "back_to_specialist_from_conflict")
+async def cb_back_to_specialist_from_conflict(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"[BACK] User {callback.from_user.id} went back to specialist selection from conflict")
+    specialists = await get_active_specialists()
+    keyboard = await build_specialist_keyboard(specialists)
+    await callback.message.answer(
+        "👨‍⚕️ Выберите специалиста:",
+        reply_markup=keyboard,
+    )
+    await state.clear()
+    await callback.answer()
+
+
 @router.callback_query(lambda c: c.data.startswith("time_"))
 async def cb_select_time(callback: CallbackQuery, state: FSMContext):
     slot_key = callback.data.split("_", 1)[1]
@@ -223,10 +257,32 @@ async def cb_select_time(callback: CallbackQuery, state: FSMContext):
         consultation_datetime=consultation_dt.isoformat(),
         reservation_id=reservation.id,
     )
-
-    await callback.answer("Слот зарезервирован! Введите ваше имя.")
-    await state.set_state(BookingFSM.AWAITING_NAME)
-    await callback.message.answer(
-        "✏️ Введите ваше имя:\n\n"
-        "Это имя будет использовано для записи на консультацию.",
-    )
+    
+    # Проверяем, есть ли уже имя и телефон
+    state_data = await state.get_data()
+    user_name = state_data.get("user_name")
+    user_phone = state_data.get("user_phone")
+    
+    if user_name and user_phone:
+        # Данные уже есть - пропускаем ввод имени и телефона
+        logger.info(f"[TIME] User {callback.from_user.id} has saved data, skipping name/phone input")
+        await state.update_data(
+            user_name=user_name,
+            user_phone=user_phone,
+        )
+        await state.set_state(BookingFSM.AWAITING_ADDITIONAL)
+        await callback.answer("Слот зарезервирован!")
+        await callback.message.answer(
+            f"✏️ Введите дополнительную информацию (необязательно):\n\n"
+            f"👤 Имя: {user_name}\n"
+            f"📱 Телефон: {user_phone}\n\n"
+            f"Если вам нужно что-то добавить — напишите ниже, или просто нажмите кнопку:",
+        )
+    else:
+        # Вводим имя и телефон как обычно
+        await state.set_state(BookingFSM.AWAITING_NAME)
+        await callback.answer("Слот зарезервирован! Введите ваше имя.")
+        await callback.message.answer(
+            "✏️ Введите ваше имя:\n\n"
+            "Это имя будет использовано для записи на консультацию.",
+        )
