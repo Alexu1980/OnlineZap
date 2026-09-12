@@ -88,6 +88,7 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             if same_spec_booking:
                 logger.warning(f"[CONFIRM] User {user_id} already booked with {specialist.name} on {date_str}")
                 
+                from aiogram.utils.keyboard import InlineKeyboardBuilder
                 kb = InlineKeyboardBuilder()
                 kb.button(
                     text="📅 Выбрать другую дату",
