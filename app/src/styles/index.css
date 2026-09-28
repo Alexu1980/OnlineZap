@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Стили для кнопок */
+.btn-primary {
+  @apply bg-blue-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors;
+}
+
+.btn-disabled {
+  @apply bg-gray-300 text-gray-500 cursor-not-allowed;
+}
+
+/* Стили для карточек */
+.card {
+  @apply bg-white rounded-lg shadow-sm p-4;
+}
+
+/* Стили для календаря */
+.calendar-day {
+  @apply p-3 rounded-lg text-center transition-colors;
+}
+
+.calendar-day-available {
+  @apply bg-blue-500 text-white hover:bg-blue-600 cursor-pointer;
+}
+
+.calendar-day-unavailable {
+  @apply bg-gray-300 text-gray-500 cursor-not-allowed;
+}
+
+/* Стили для слотов */
+.slot-button {
+  @apply p-3 rounded-lg text-center transition-colors;
+}
+
+.slot-available {
+  @apply bg-blue-500 text-white hover:bg-blue-600 cursor-pointer;
+}
+
+.slot-unavailable {
+  @apply bg-gray-300 text-gray-500 cursor-not-allowed;
+}
