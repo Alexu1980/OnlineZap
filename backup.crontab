@@ -1,0 +1,11 @@
+# Crontab для автоматического бэкапа и обслуживания
+# Установите: crontab backup.crontab
+
+# Резервное копирование базы данных каждый день в 2:00
+0 2 * * * /opt/onlinezap/backup.sh >> /var/log/onlinezap-backup.log 2>&1
+
+# Очистка старых образов Docker каждую неделю в воскресенье в 3:00
+0 3 * * 0 docker system prune -f >> /var/log/onlinezap-cleanup.log 2>&1
+
+# Проверка здоровья приложения каждые 5 минут
+*/5 * * * * curl -f http://localhost:8000/api/health || docker-compose restart app

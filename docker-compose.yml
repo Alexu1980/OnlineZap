@@ -1,0 +1,91 @@
+services:
+  # Backend + Frontend (FastAPI + React)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: onlinezap-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Персистентное хранилище для базы данных
+      - db-data:/app/Data
+      # Персистентное хранилище для логов
+      - logs:/app
+      # credentials.json для Google Sheets
+      - ./credentials.json:/app/credentials.json:ro
+    environment:
+      # Переменные окружения
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ADMIN_IDS_CSV=${ADMIN_IDS_CSV}
+      - ADMIN_CHAT_ID_CSV=${ADMIN_CHAT_ID_CSV}
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:////app/Data/bookings.db}
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - GOOGLE_SHEET_NAME=${GOOGLE_SHEET_NAME:-Bookings}
+      - GOOGLE_SHEETS_CREDENTIALS_PATH=${GOOGLE_SHEETS_CREDENTIALS_PATH:-credentials.json}
+      - SLOT_DURATION_MINUTES=${SLOT_DURATION_MINUTES:-60}
+      - RESERVATION_TIMEOUT_SECONDS=${RESERVATION_TIMEOUT_SECONDS:-300}
+      - REMINDER_24H_ENABLED=${REMINDER_24H_ENABLED:-true}
+      - REMINDER_2H_ENABLED=${REMINDER_2H_ENABLED:-true}
+      - MINIAPP_URL=${MINIAPP_URL:-http://localhost:8000/app}
+    networks:
+      - onlinezap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy (опционально, для HTTPS)
+  nginx:
+    image: nginx:alpine
+    container_name: onlinezap-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - onlinezap-network
+
+  # PostgreSQL (опционально, вместо SQLite)
+  # Раскомментируйте, если нужен PostgreSQL
+  # db:
+  #   image: postgres:16-alpine
+  #   container_name: onlinezap-db
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_USER=${POSTGRES_USER:-onlinezap}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
+  #     - POSTGRES_DB=${POSTGRES_DB:-onlinezap}
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - onlinezap-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U onlinezap"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  db-data:
+    driver: local
+  logs:
+    driver: local
+  # pgdata:
+  #   driver: local
+
+networks:
+  onlinezap-network:
+    driver: bridge
