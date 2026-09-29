@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { WebApp } from '@twa-dev/sdk'
+import WebApp from '@twa-dev/sdk'
 import { useBookingStore } from '../store/bookingStore'
 
 export default function Confirmation() {

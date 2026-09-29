@@ -9,15 +9,9 @@ export default function TimeSlots() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!specialist || !date) {
-      prevStep()
-      return
-    }
-    loadSlots()
-  }, [specialist, date])
-
   const loadSlots = async () => {
+    if (!specialist || !date) return
+    
     try {
       setLoading(true)
       const response = await api.get('/api/slots', {
@@ -34,6 +28,14 @@ export default function TimeSlots() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!specialist || !date) {
+      prevStep()
+      return
+    }
+    loadSlots()
+  }, [specialist, date])
 
   const handleSlotSelect = (slotTime: string) => {
     setTime(slotTime)
@@ -68,7 +70,7 @@ export default function TimeSlots() {
         Выберите время
       </h2>
       <p className="text-sm text-gray-600 mb-4">
-        {new Date(date).toLocaleDateString('ru-RU', {
+        {new Date(date!).toLocaleDateString('ru-RU', {
           day: 'numeric',
           month: 'long',
           year: 'numeric',

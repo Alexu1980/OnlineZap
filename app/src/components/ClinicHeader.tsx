@@ -1,6 +1,28 @@
-import { WebApp } from '@twa-dev/sdk'
+import { useEffect } from 'react'
+import WebApp from '@twa-dev/sdk'
+import { useBookingStore } from '../store/bookingStore'
 
 export default function ClinicHeader() {
+  const { step } = useBookingStore()
+
+  useEffect(() => {
+    if (step !== 'specialist') {
+      WebApp.BackButton.show()
+    } else {
+      WebApp.BackButton.hide()
+    }
+
+    return () => {
+      WebApp.BackButton.offClick(handleBack)
+    }
+  }, [step])
+
+  const handleBack = () => {
+    // Handle back button click
+  }
+
+  WebApp.BackButton.onClick(handleBack)
+
   return (
     <div className="bg-white p-4 shadow-sm flex items-center gap-3">
       {/* Логотип клиники */}
@@ -24,26 +46,6 @@ export default function ClinicHeader() {
         <h1 className="text-lg font-bold text-gray-900">Клиника "Здоровье"</h1>
         <p className="text-sm text-gray-600">Запись на консультацию</p>
       </div>
-      
-      {/* Кнопка назад (если не первый шаг) */}
-      <button
-        onClick={() => WebApp.BackButton.onClick()}
-        className="text-blue-500 hover:text-blue-600"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-      </button>
     </div>
   )
 }

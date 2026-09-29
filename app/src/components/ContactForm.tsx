@@ -10,7 +10,6 @@ export default function ContactForm() {
   const [additionalInfo, setAdditionalInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +34,6 @@ export default function ContactForm() {
 
       await api.post('/api/bookings', bookingData)
       
-      setSuccess(true)
       nextStep()
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Ошибка при создании записи')

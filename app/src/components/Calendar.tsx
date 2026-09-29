@@ -9,15 +9,9 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!specialist) {
-      prevStep()
-      return
-    }
-    loadAvailableDates()
-  }, [specialist])
-
   const loadAvailableDates = async () => {
+    if (!specialist) return
+    
     try {
       setLoading(true)
       const response = await api.get('/api/availability', {
@@ -35,6 +29,14 @@ export default function Calendar() {
     }
   }
 
+  useEffect(() => {
+    if (!specialist) {
+      prevStep()
+      return
+    }
+    loadAvailableDates()
+  }, [specialist])
+
   const handleDateSelect = (dateStr: string) => {
     setDate(dateStr)
     nextStep()
@@ -49,15 +51,6 @@ export default function Calendar() {
     const date = new Date(dateStr)
     const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
     return days[date.getDay()]
-  }
-
-  const getMonthName = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const months = [
-      'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
-      'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'
-    ]
-    return months[date.getMonth()]
   }
 
   if (loading) {

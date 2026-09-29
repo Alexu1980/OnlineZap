@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { WebApp } from '@twa-dev/sdk'
+import WebApp from '@twa-dev/sdk'
 import ClinicHeader from './components/ClinicHeader'
 import SpecialistSelect from './components/SpecialistSelect'
 import Calendar from './components/Calendar'
