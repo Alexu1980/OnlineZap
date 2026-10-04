@@ -45,7 +45,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Копируем собранный фронтенд из frontend-builder
-COPY --from=frontend-builder /app/dist /app/static/app
+COPY --from=frontend-builder /app/static/app /app/static/app
 
 # Создаём папку для базы данных
 RUN mkdir -p /app/Data
