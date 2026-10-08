@@ -196,17 +196,6 @@ async def on_shutdown(**kwargs):
     logger.info("БОТ ОСТАНОВЛЕН")
 
 
-async def run_fastapi_server():
-    """Запуск FastAPI сервера для MiniApp."""
-    config = uvicorn.Config(
-        "webapp.main:app",
-        host="0.0.0.0",
-        port=8000,
-        log_level="info",
-    )
-    server = uvicorn.Server(config)
-    await server.serve()
-
 
 def main():
     # Create bot and dispatcher
@@ -226,25 +215,27 @@ def main():
     # Запуск FastAPI и polling в параллельных задачах
     logger.info("Запуск бота и MiniApp API...")
     
-    async def run_all():
-        # Создаем задачу для FastAPI
-        fastapi_task = asyncio.create_task(run_fastapi_server())
-        logger.info("FastAPI сервер запущен на порту 8000")
-        
-        try:
-            # Запуск polling (блокирует до KeyboardInterrupt)
-            await dp.run_polling(bot_instance, skip_updates=True)
-        finally:
-            # Остановка FastAPI
-            fastapi_task.cancel()
-            try:
-                await fastapi_task
-            except asyncio.CancelledError:
-                pass
-            logger.info("FastAPI сервер остановлен")
+    import uvicorn
+    import threading
+    
+    def run_fastapi_in_thread():
+        """Запуск FastAPI в отдельном потоке"""
+        uvicorn.run(
+            "webapp.main:app",
+            host="0.0.0.0",
+            port=8000,
+            log_level="info",
+            access_log=False,
+        )
+    
+    # Запускаем FastAPI в отдельном потоке
+    fastapi_thread = threading.Thread(target=run_fastapi_in_thread, daemon=True)
+    fastapi_thread.start()
+    logger.info("FastAPI сервер запущен на порту 8000")
     
     try:
-        asyncio.run(run_all())
+        # Запуск polling (использует свой собственный event loop)
+        dp.run_polling(bot_instance, skip_updates=True)
     except KeyboardInterrupt:
         logger.info("Получен сигнал KeyboardInterrupt")
     except Exception as e:
