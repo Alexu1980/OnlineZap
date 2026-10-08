@@ -35,10 +35,10 @@ cd /opt/onlinezap
 cd /opt/onlinezap
 
 # Скопируйте пример
-cp .env.example .env
+cp .env_backup.example .env_backup
 
 # Отредактируйте
-nano .env
+nano .env_backup
 ```
 
 **Обязательные изменения:**
@@ -107,8 +107,8 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 ```bash
 cd /opt/onlinezap
-cp .env.example .env
-nano .env  # Отредактируйте переменные
+cp .env_backup.example .env_backup
+nano .env_backup  # Отредактируйте переменные
 sudo cp credentials.json .
 ```
 
@@ -134,7 +134,7 @@ sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem nginx/ssl/cert.pem
 sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem nginx/ssl/key.pem
 sudo chmod 600 nginx/ssl/key.pem
 
-# Обновление MINIAPP_URL в .env
+# Обновление MINIAPP_URL в .env_backup
 export MINIAPP_URL=https://your-domain.com/app
 
 # Перезапуск

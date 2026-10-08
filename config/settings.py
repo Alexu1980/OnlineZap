@@ -5,9 +5,9 @@ from typing import List
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-# Load .env from project root
+# Load .env_backup from project root
 _project_root = Path(__file__).parent.parent
-_env_path = _project_root / ".env"
+_env_path = _project_root / ".env_backup"
 if _env_path.exists():
     load_dotenv(str(_env_path), encoding="utf-8")
 

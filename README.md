@@ -45,8 +45,8 @@ cd OnlineZap
 ### 2. Настройка переменных окружения
 
 ```bash
-cp .env.example .env
-# Отредактируйте .env и добавьте свои значения
+cp .env_backup.example .env_backup
+# Отредактируйте .env_backup и добавьте свои значения
 ```
 
 ### 3. Локальная разработка (SQLite)
@@ -187,7 +187,7 @@ docker run -d \
   -p 5432:5432 \
   postgres:16-alpine
 
-# Update .env
+# Update .env_backup
 DATABASE_URL=postgresql+asyncpg://onlinezap:password@localhost:5432/onlinezap
 ```
 

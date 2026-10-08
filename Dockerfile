@@ -9,18 +9,18 @@ WORKDIR /app
 COPY app/package.json ./
 
 # Устанавливаем зависимости
+RUN rm -rf node_modules
 RUN npm install
 
 # Копируем исходный код
 COPY app/ ./
 
-# Собираем фронтенд
-ARG VITE_API_URL=http://localhost:8000
-ENV VITE_API_URL=$VITE_API_URL
+# Собираем фронтенд в dist/
+RUN rm -rf node_modules/.vite
 RUN npm run build
 
 # =====================
-# Этап 2: Backend
+# Этап 2: Backend (Python)
 # =====================
 FROM python:3.12-slim AS backend
 
@@ -28,6 +28,7 @@ FROM python:3.12-slim AS backend
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем Python зависимости
@@ -45,13 +46,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Копируем собранный фронтенд из frontend-builder
-COPY --from=frontend-builder /app/static/app /app/static/app
+COPY --from=frontend-builder /app/dist /app/static/app
 
-# Создаём папку для базы данных
-RUN mkdir -p /app/Data
+# Создаём папку для credentials
+RUN mkdir -p /app
 
 # Открываем порты
 EXPOSE 8000
 
-# Команда запуска
-CMD ["uvicorn", "webapp.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Команда запуска (запускает main.py, который включает и бот, и FastAPI)
+CMD ["/opt/venv/bin/python3", "main.py"]

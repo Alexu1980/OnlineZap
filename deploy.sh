@@ -189,10 +189,10 @@ deploy() {
     # Настраиваем firewall
     setup_firewall
     
-    # Копируем .env
-    if [ ! -f .env ]; then
+    # Копируем .env_backup
+    if [ ! -f .env_backup ]; then
         echo -e "${YELLOW}Создание .env из .env.example...${NC}"
-        cp .env.example .env
+        cp .env_backup.example .env_backup
         echo -e "${YELLOW}Пожалуйста, отредактируйте .env перед запуском${NC}"
         read -p "Нажмите Enter для продолжения..."
     fi

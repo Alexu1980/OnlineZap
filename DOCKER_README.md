@@ -12,10 +12,10 @@
 ### 1. Подготовка
 
 ```bash
-# Скопируйте пример .env
-cp .env.example .env
+# Скопируйте пример .env_backup
+cp .env_backup.example .env_backup
 
-# Отредактируйте .env
+# Отредактируйте .env_backup
 # Замените значения на ваши:
 # - BOT_TOKEN
 # - GOOGLE_SHEET_ID
@@ -99,7 +99,7 @@ sudo cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem nginx/ssl/cert.pem
 sudo cp /etc/letsencrypt/live/$DOMAIN/privkey.pem nginx/ssl/key.pem
 sudo chmod 600 nginx/ssl/key.pem
 
-# Обновите MINIAPP_URL в .env
+# Обновите MINIAPP_URL в .env_backup
 export MINIAPP_URL=https://$DOMAIN/app
 
 # Перезапустите
