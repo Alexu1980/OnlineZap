@@ -84,14 +84,8 @@ async def on_startup(**kwargs):
     logger.info(f"Admin chat: {settings.admin_chat_id}")
     logger.info(f"Google Sheets: {settings.google_sheet_id}")
 
-    # Создание папки Data для базы данных
-    import os
-    data_dir = "Data"
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        logger.info(f"Создана папка {data_dir} для базы данных")
-
-    # Инициализация базы данных
+    # Инициализация базы данных (PostgreSQL/SQLite)
+    logger.info("Инициализация базы данных...")
     logger.info("Шаг 1/4: Инициализация базы данных...")
     await init_db()
     logger.info("Шаг 1/4: База данных инициализирована")

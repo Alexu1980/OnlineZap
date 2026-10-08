@@ -9,9 +9,14 @@ from webapp.routes import specialists, availability, slots, bookings
 app = FastAPI(title="OnlineZap API", version="1.0.0")
 
 # CORS middleware
+# Для Amvera: разрешаем запросы от frontend домена
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене ограничить до домена MiniApp
+    allow_origins=[
+        "*",  # В продакшене заменить на конкретные домены Amvera
+        # "https://onlinezap-frontend.amvera.site",
+        # "https://your-custom-domain.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

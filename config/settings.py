@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     reservation_timeout_seconds: int = 300
     reminder_24h_enabled: bool = True
     reminder_2h_enabled: bool = True
-    database_url: str = "sqlite+aiosqlite:////data/bookings.db"
+    database_url: str = "postgresql+asyncpg://onlinezap:change_me@localhost:5432/onlinezap"
     admin_chat_id_csv: str
     miniapp_url: str = "http://localhost:3000/app"
 

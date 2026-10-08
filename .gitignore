@@ -50,6 +50,14 @@ Thumbs.db
 
 # Docker
 .dockerignore
+Dockerfile.*
+
+# Amvera
+amvera.yml
 
 # Nginx SSL (секретные ключи)
 nginx/ssl/
+
+# OS
+.DS_Store
+Thumbs.db
