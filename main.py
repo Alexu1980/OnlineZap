@@ -225,26 +225,31 @@ def main():
 
     # Запуск FastAPI и polling в параллельных задачах
     logger.info("Запуск бота и MiniApp API...")
-    try:
+    
+    async def run_all():
         # Создаем задачу для FastAPI
         fastapi_task = asyncio.create_task(run_fastapi_server())
         logger.info("FastAPI сервер запущен на порту 8000")
         
-        # Запуск polling
-        dp.run_polling(bot_instance, skip_updates=True)
+        try:
+            # Запуск polling (блокирует до KeyboardInterrupt)
+            await dp.run_polling(bot_instance, skip_updates=True)
+        finally:
+            # Остановка FastAPI
+            fastapi_task.cancel()
+            try:
+                await fastapi_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("FastAPI сервер остановлен")
+    
+    try:
+        asyncio.run(run_all())
     except KeyboardInterrupt:
         logger.info("Получен сигнал KeyboardInterrupt")
     except Exception as e:
         logger.error(f"Критическая ошибка: {e}", exc_info=True)
         sys.exit(1)
-    finally:
-        # Остановка FastAPI
-        fastapi_task.cancel()
-        try:
-            fastapi_task.result()
-        except asyncio.CancelledError:
-            pass
-        logger.info("FastAPI сервер остановлен")
 
 
 if __name__ == "__main__":
