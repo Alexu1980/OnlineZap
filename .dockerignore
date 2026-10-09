@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+!MINIAPP_README.md
+
+# Logs
+*.log
+bot.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+Data/
+
+# Google Sheets credentials
+credentials.json
+
+# Frontend
+app/node_modules/
+app/dist/
+app/build/
+
+# Plans
+.gigacode/
+
+# Downloads
+Downloads/

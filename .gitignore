@@ -1,63 +1,30 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-*.egg-info/
-*.egg
-dist/
-build/
-*.whl
-
-# Virtual environment
-venv/
-.venv/
-env/
-
-# Environment variables
-.env_backup
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-Data/
-
-# Google Sheets credentials
-credentials.json
-# Но не игнорируем другие JSON файлы
-!app/package.json
-!app/package-lock.json
-!webapp/*.json
-
-# Logs
 *.log
-bot.log
+.env
+.venv/
+
+# Node
+node_modules/
+dist/
+frontend/app/dist/
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
-*.swo
-*~
-.DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Credentials
+credentials.json
+backend/credentials.json
 
 # OS
+.DS_Store
 Thumbs.db
 
 # Docker
-.dockerignore
-Dockerfile.*
-
-# Amvera
+Dockerfile.backend
+Dockerfile.frontend
+amvera.yml
 amvera.yaml
-
-# Nginx SSL (секретные ключи)
-nginx/ssl/
-
-# OS
-.DS_Store
-Thumbs.db

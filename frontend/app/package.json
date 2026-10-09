@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:backend": "tsc && vite build --mode backend",
-    "build:frontend": "tsc && vite build --mode frontend",
     "preview": "vite preview"
   },
   "dependencies": {
