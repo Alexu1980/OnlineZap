@@ -16,7 +16,7 @@ export default function SpecialistSelect() {
   const loadSpecialists = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/api/specialists')
+      const response = await api.get('/specialists')
       setSpecialists(response.data.specialists)
     } catch (err) {
       setError('Не удалось загрузить список специалистов')

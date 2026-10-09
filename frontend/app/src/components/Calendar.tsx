@@ -14,7 +14,7 @@ export default function Calendar() {
     
     try {
       setLoading(true)
-      const response = await api.get('/api/availability', {
+      const response = await api.get('/availability', {
         params: {
           specialist_id: specialist.id,
           days: 30,

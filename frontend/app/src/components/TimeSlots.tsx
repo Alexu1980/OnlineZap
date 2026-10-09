@@ -14,7 +14,7 @@ export default function TimeSlots() {
     
     try {
       setLoading(true)
-      const response = await api.get('/api/slots', {
+      const response = await api.get('/slots', {
         params: {
           specialist_id: specialist.id,
           date: date,
