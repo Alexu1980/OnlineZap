@@ -32,7 +32,7 @@ export default function ContactForm() {
         additional_info: additionalInfo.trim() || undefined,
       }
 
-      await api.post('/api/bookings', bookingData)
+      await api.post('/bookings', bookingData)
       
       nextStep()
     } catch (err: any) {
