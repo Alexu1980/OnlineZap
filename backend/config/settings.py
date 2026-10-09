@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     reminder_2h_enabled: bool = True
     database_url: str = "postgresql+asyncpg://onlinezap:change_me@localhost:5432/onlinezap"
     admin_chat_id_csv: str
-    miniapp_url: str = "http://localhost:3000/app"
+    miniapp_url: str = "http://localhost:3000"
 
     class Config:
         env_file_encoding = "utf-8"
