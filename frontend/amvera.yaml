@@ -1,0 +1,15 @@
+meta:
+  appTitle: "OnlineZap Frontend"
+  toolchain: docker
+
+services:
+  frontendlonlinezap:
+    image: frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    containerPort: 80
+    persistence:
+      - mount: /data
+        name: frontend-data
+    args: []

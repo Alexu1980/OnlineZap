@@ -26,5 +26,6 @@ Thumbs.db
 # Docker
 Dockerfile.backend
 Dockerfile.frontend
+
+# Amvera configs (ОСТАВЛЯЕМ для деплоя)
 amvera.yml
-amvera.yaml
