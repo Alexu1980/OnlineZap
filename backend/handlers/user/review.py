@@ -7,7 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
 
 from handlers.user.start import BookingFSM
-from keyboards.inline import build_review_keyboard
+from keyboards.inline import build_review_keyboard, build_booking_action_keyboard
 from utils.helpers import get_datetime_display
 from database.engine import AsyncSessionLocal
 from database.repositories import (
@@ -21,7 +21,6 @@ from database.repositories import (
 from database.models import Booking
 from services.sheet_service import SheetService
 from services.scheduler_service import SchedulerService
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -222,9 +221,6 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             f"Для управления записью используйте кнопки ниже:"
         )
 
-        from keyboards.inline import build_booking_action_keyboard, InlineKeyboardButton, InlineKeyboardBuilder
-        
-        # Создаём клавиатуру с кнопками
         kb = InlineKeyboardBuilder()
         
         # Кнопки управления записью
