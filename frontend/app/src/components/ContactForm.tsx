@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useBookingStore } from '../store/bookingStore'
-import api from '../api/client'
+import api, { getTelegramUserId, getTelegramUsername } from '../api/client'
 import type { BookingCreate } from '../api/types'
+import WebApp from '@twa-dev/sdk'
 
 export default function ContactForm() {
   const { specialist, date, time, nextStep, prevStep } = useBookingStore()
@@ -10,6 +11,16 @@ export default function ContactForm() {
   const [additionalInfo, setAdditionalInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Автозаполнение данных из Telegram
+  useEffect(() => {
+    const userId = getTelegramUserId()
+    const username = getTelegramUsername()
+    if (username && !name) {
+      setName(username)
+    }
+    console.log('Telegram user:', { userId, username })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,6 +34,11 @@ export default function ContactForm() {
       setLoading(true)
       setError(null)
 
+      const telegramUserId = getTelegramUserId()
+      const telegramUsername = getTelegramUsername()
+      
+      console.log('Sending booking with Telegram user:', { telegramUserId, telegramUsername })
+
       const bookingData: BookingCreate = {
         specialist_id: specialist!.id,
         date: date!,
@@ -32,7 +48,18 @@ export default function ContactForm() {
         additional_info: additionalInfo.trim() || undefined,
       }
 
-      await api.post('/bookings', bookingData)
+      // Отправляем user_id и username в headers
+      const response = await api.post('/bookings', bookingData, {
+        headers: {
+          'X-Telegram-User-Id': telegramUserId || '0',
+          'X-Telegram-Username': telegramUsername || name.trim(),
+        }
+      })
+      
+      console.log('Booking created:', response.data)
+      
+      // Расширяем окно после успешной отправки
+      WebApp.expand()
       
       nextStep()
     } catch (err: any) {

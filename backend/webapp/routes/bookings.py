@@ -1,6 +1,6 @@
 """Маршрут для создания бронирований."""
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from webapp.dependencies import get_db_session
@@ -14,16 +14,22 @@ router = APIRouter()
 
 @router.post("/bookings", response_model=BookingResponse)
 async def create_booking(
+    request: Request,
     data: BookingCreate,
     db: AsyncSession = Depends(get_db_session)
 ):
     """Создание бронирования из MiniApp."""
     try:
-        # Для MVP используем user_id=0 (без аутентификации)
+        # Получаем user_id из headers (Telegram WebApp)
+        telegram_user_id = request.headers.get('X-Telegram-User-Id', '0')
+        telegram_username = request.headers.get('X-Telegram-Username', data.name)
+        
+        logger.info(f"Booking request: user_id={telegram_user_id}, username={telegram_username}")
+        
         result = await BookingService.create_booking(
             db=db,
-            user_id=0,  # MVP: без аутентификации
-            telegram_username=data.name,  # Используем имя как username
+            user_id=int(telegram_user_id),  # Используем реальный Telegram ID
+            telegram_username=telegram_username,
             specialist_id=data.specialist_id,
             date_str=data.date,
             time_str=data.time,
@@ -33,7 +39,7 @@ async def create_booking(
             additional_info=data.additional_info,
         )
         
-        logger.info(f"Booking created: {result['id']} for specialist {data.specialist_id}")
+        logger.info(f"Booking created: {result['id']} for user {telegram_user_id}")
         
         return BookingResponse(
             id=result['id'],
@@ -50,15 +56,19 @@ async def create_booking(
 
 @router.post("/bookings/", response_model=BookingResponse)
 async def create_booking_trailing(
+    request: Request,
     data: BookingCreate,
     db: AsyncSession = Depends(get_db_session)
 ):
     """Создание бронирования (с trailing slash)."""
     try:
+        telegram_user_id = request.headers.get('X-Telegram-User-Id', '0')
+        telegram_username = request.headers.get('X-Telegram-Username', data.name)
+        
         result = await BookingService.create_booking(
             db=db,
-            user_id=0,
-            telegram_username=data.name,
+            user_id=int(telegram_user_id),
+            telegram_username=telegram_username,
             specialist_id=data.specialist_id,
             date_str=data.date,
             time_str=data.time,
@@ -68,7 +78,7 @@ async def create_booking_trailing(
             additional_info=data.additional_info,
         )
         
-        logger.info(f"Booking created: {result['id']} for specialist {data.specialist_id}")
+        logger.info(f"Booking created: {result['id']} for user {telegram_user_id}")
         
         return BookingResponse(
             id=result['id'],

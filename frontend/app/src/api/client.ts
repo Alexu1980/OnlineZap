@@ -1,6 +1,7 @@
 import axios from 'axios'
+import WebApp from '@twa-dev/sdk'
 
-// API base URL (в продакшене заменить на реальный домен)
+// API base URL
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api'
 
 console.log('API_BASE_URL:', API_BASE_URL)
@@ -36,9 +37,36 @@ api.interceptors.response.use(
   }
 )
 
-// Добавление init_data из Telegram WebApp
-export const setAuthData = (initData: string) => {
-  api.defaults.headers.common['Authorization'] = `TelegramWebApp ${initData}`
+// Получение user_id из Telegram WebApp
+export function getTelegramUserId(): number | null {
+  try {
+    const initData = WebApp.initData
+    const urlParams = new URLSearchParams(initData)
+    const userParam = urlParams.get('user')
+    if (userParam) {
+      const user = JSON.parse(userParam)
+      return user.id || null
+    }
+  } catch (e) {
+    console.error('Failed to parse Telegram init data:', e)
+  }
+  return null
+}
+
+// Получение username из Telegram WebApp
+export function getTelegramUsername(): string | null {
+  try {
+    const initData = WebApp.initData
+    const urlParams = new URLSearchParams(initData)
+    const userParam = urlParams.get('user')
+    if (userParam) {
+      const user = JSON.parse(userParam)
+      return user.username || user.first_name || null
+    }
+  } catch (e) {
+    console.error('Failed to parse Telegram init data:', e)
+  }
+  return null
 }
 
 export default api
