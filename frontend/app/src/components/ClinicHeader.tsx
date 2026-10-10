@@ -6,11 +6,18 @@ export default function ClinicHeader() {
   const { step, prevStep } = useBookingStore()
 
   useEffect(() => {
-    if (step !== 'specialist' && WebApp.BackButton) {
-      WebApp.BackButton.show()
-      WebApp.BackButton.onClick(handleBack)
+    if (step !== 'specialist') {
+      if (WebApp.BackButton && WebApp.platform !== 'unknown') {
+        WebApp.BackButton.show()
+        WebApp.BackButton.onClick(handleBack)
+      } else {
+        // Для Telegram 6.0 используем нативную навигацию
+        // BackButton.hide()
+      }
     } else {
-      WebApp.BackButton.hide()
+      if (WebApp.BackButton) {
+        WebApp.BackButton.hide()
+      }
     }
 
     return () => {
