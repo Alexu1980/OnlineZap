@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from webapp.dependencies import get_db_session
 from webapp.schemas import AvailabilityResponse
@@ -45,7 +45,7 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
         logger.warning(f"Specialist {specialist_id} not found")
         raise HTTPException(status_code=404, detail="Специалист не найден")
     
-    # Получение расписания специалиста
+    # Получение расписания специалиста (все доступные слоты)
     result = await db.execute(
         select(Availability)
         .where(
@@ -58,41 +58,60 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
     if not availabilities:
         return {"dates": []}
     
+    # Общее количество слотов в день
+    total_slots_per_day = len(availabilities)
+    
     # Определение рабочих дней (day_of_week из Availability)
     working_days = {avail.day_of_week for avail in availabilities}
     
-    # Генерация дат на указанный период
+    # Получаем ВСЕ бронирования на период
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = today + timedelta(days=days)
+    
+    bookings_result = await db.execute(
+        select(Booking)
+        .where(
+            Booking.specialist_id == specialist_id,
+            Booking.consultation_date >= today.strftime("%Y-%m-%d"),
+            Booking.consultation_date < end_date.strftime("%Y-%m-%d"),
+            Booking.status != "Отменена"
+        )
+    )
+    all_bookings = bookings_result.scalars().all()
+    
+    # Группируем бронирования по датам
+    bookings_by_date = {}
+    for booking in all_bookings:
+        date_str = booking.consultation_date
+        if date_str not in bookings_by_date:
+            bookings_by_date[date_str] = []
+        bookings_by_date[date_str].append(booking)
+    
+    # Генерация дат на указанный период
     dates = []
     
     for i in range(days):
         date = today + timedelta(days=i)
         day_of_week = date.weekday()
+        date_str = date.strftime("%Y-%m-%d")
         
         # Проверка, является ли день рабочим
         is_working_day = day_of_week in working_days
         
         if is_working_day:
-            # Проверка занятых слотов на эту дату
-            date_str = date.strftime("%Y-%m-%d")
-            booking_result = await db.execute(
-                select(Booking)
-                .where(
-                    Booking.specialist_id == specialist_id,
-                    Booking.consultation_date == date_str,
-                    Booking.status != "��тменена"
-                )
-            )
-            booked_bookings = booking_result.scalars().all()
+            # Считаем занятые слоты на эту дату
+            booked_count = len(bookings_by_date.get(date_str, []))
             
-            # Подсчет доступных слотов
-            total_slots = len(availabilities)
-            booked_count = len(booked_bookings)
-            available_count = max(0, total_slots - booked_count)
+            # Доступные слоты = общее количество - занятые
+            available_count = max(0, total_slots_per_day - booked_count)
+            
+            has_slots = available_count > 0
+            
+            logger.info(f"Date {date_str}: total={total_slots_per_day}, booked={booked_count}, available={available_count}")
             
             dates.append(AvailabilityResponse(
                 date=date_str,
-                has_slots=available_count > 0,
+                has_slots=has_slots,
                 slots_count=available_count,
             ).model_dump())
     
