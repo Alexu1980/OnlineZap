@@ -10,8 +10,8 @@ from database.models import Specialist
 router = APIRouter()
 
 
-@router.get("")
-async def get_specialists(
+@router.get("/specialists", include_in_schema=False)
+async def get_specialists_list(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Получение списка активных специалистов."""
@@ -33,7 +33,30 @@ async def get_specialists(
     }
 
 
-@router.get("/{specialist_id}")
+@router.get("/specialists/", include_in_schema=False)
+async def get_specialists_list_trailing(
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Получение списка активных специалистов (с trailing slash)."""
+    result = await db.execute(
+        select(Specialist)
+        .where(Specialist.is_active == True)  # noqa: E712
+    )
+    specialists = result.scalars().all()
+    
+    return {
+        "specialists": [
+            SpecialistResponse(
+                id=spec.id,
+                name=spec.name,
+                specialization=spec.specialization,
+            ).model_dump()
+            for spec in specialists
+        ]
+    }
+
+
+@router.get("/{specialist_id:int}")
 async def get_specialist(
     specialist_id: int,
     db: AsyncSession = Depends(get_db_session)

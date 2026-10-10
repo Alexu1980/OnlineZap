@@ -1,4 +1,5 @@
 """Маршрут для получения доступных дат для специалиста."""
+import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,24 +9,40 @@ from webapp.dependencies import get_db_session
 from webapp.schemas import AvailabilityResponse
 from database.models import Availability, Booking
 
+logger = logging.getLogger("availability")
+
 router = APIRouter()
 
 
-@router.get("")
-async def get_availability(
+@router.get("/availability")
+async def get_availability_list(
     specialist_id: int = Query(..., description="ID специалиста"),
     days: int = Query(30, ge=1, le=90, description="Количество дней для проверки"),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """
-    Получение доступных дат для специалиста на заданный период.
-    
-    Возвращает список дат с информацией о наличии слотов.
-    """
+    """Получение доступных дат для специалиста на заданный период."""
+    logger.info(f"get_availability_list: specialist_id={specialist_id}, days={days}")
+    return await _get_availability_data(specialist_id, days, db)
+
+
+@router.get("/availability/")
+async def get_availability_list_trailing(
+    specialist_id: int = Query(..., description="ID специалиста"),
+    days: int = Query(30, ge=1, le=90, description="Количество дней для проверки"),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Получение доступных дат для специалиста (с trailing slash)."""
+    logger.info(f"get_availability_list_trailing: specialist_id={specialist_id}, days={days}")
+    return await _get_availability_data(specialist_id, days, db)
+
+
+async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession):
+    """Общие данные для получения расписания."""
     # Проверка существования специалиста
     from database.repositories import get_specialist_by_id
     specialist = await get_specialist_by_id(db, specialist_id)
     if not specialist:
+        logger.warning(f"Specialist {specialist_id} not found")
         raise HTTPException(status_code=404, detail="Специалист не найден")
     
     # Получение расписания специалиста
@@ -63,7 +80,7 @@ async def get_availability(
                 .where(
                     Booking.specialist_id == specialist_id,
                     Booking.consultation_date == date_str,
-                    Booking.status != "Отменена"
+                    Booking.status != "��тменена"
                 )
             )
             booked_bookings = booking_result.scalars().all()

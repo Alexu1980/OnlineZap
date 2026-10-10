@@ -1,9 +1,11 @@
 meta:
-  appTitle: "OnlineZap Backend"
-  toolchain: docker
+  environment: docker
+  toolchain:
+    name: docker
+    version: "1.0"
 
 services:
-  backendlonlinezap:
+  onlinezap-backend:
     image: backend
     build:
       context: .
@@ -12,7 +14,6 @@ services:
     persistence:
       - mount: /data
         name: backend-data
-    args: []
 
 postgresql:
   - name: onlinezap-db
