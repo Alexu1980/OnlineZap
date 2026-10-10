@@ -3,25 +3,26 @@ import WebApp from '@twa-dev/sdk'
 import { useBookingStore } from '../store/bookingStore'
 
 export default function ClinicHeader() {
-  const { step } = useBookingStore()
+  const { step, prevStep } = useBookingStore()
 
   useEffect(() => {
-    if (step !== 'specialist') {
+    if (step !== 'specialist' && WebApp.BackButton) {
       WebApp.BackButton.show()
+      WebApp.BackButton.onClick(handleBack)
     } else {
       WebApp.BackButton.hide()
     }
 
     return () => {
-      WebApp.BackButton.offClick(handleBack)
+      if (WebApp.BackButton) {
+        WebApp.BackButton.offClick(handleBack)
+      }
     }
   }, [step])
 
   const handleBack = () => {
-    // Handle back button click
+    prevStep()
   }
-
-  WebApp.BackButton.onClick(handleBack)
 
   return (
     <div className="bg-white p-4 shadow-sm flex items-center gap-3">
