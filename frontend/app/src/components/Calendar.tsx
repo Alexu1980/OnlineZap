@@ -37,7 +37,8 @@ export default function Calendar() {
     loadAvailableDates()
   }, [specialist])
 
-  const handleDateSelect = (dateStr: string) => {
+  const handleDateSelect = (dateStr: string, isAvailable: boolean) => {
+    if (!isAvailable) return
     setDate(dateStr)
     nextStep()
   }
@@ -101,7 +102,7 @@ export default function Calendar() {
           return (
             <button
               key={item.date}
-              onClick={() => isAvailable && handleDateSelect(item.date)}
+              onClick={() => handleDateSelect(item.date, isAvailable)}
               className={`
                 calendar-day
                 ${isAvailable

@@ -45,6 +45,7 @@ code {
 
 .calendar-day-unavailable {
   @apply bg-gray-300 text-gray-500 cursor-not-allowed;
+  pointer-events: none;
 }
 
 /* Стили для слотов */
