@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.repositories import (
@@ -15,6 +16,7 @@ from database.repositories import (
     get_specialist_by_id,
     has_booking_at,
 )
+from database.models import Booking
 from exceptions.booking import (
     SlotAlreadyReserved,
     SlotAlreadyBooked,
@@ -45,6 +47,21 @@ class BookingService:
         additional_info: str | None = None,
     ) -> dict:
         logger.info(f"[BOOKING_CREATE] Creating booking: user={user_id}, spec={specialist_id}, date={date_str}, time={time_str}")
+        
+        # Проверяем, не занято ли уже время
+        existing_check = await db.execute(
+            select(Booking).where(
+                Booking.specialist_id == specialist_id,
+                Booking.consultation_date == date_str,
+                Booking.consultation_time == time_str,
+                Booking.status != "Отменена",
+            )
+        )
+        existing_bookings = existing_check.scalars().all()
+        if existing_bookings:
+            for eb in existing_bookings:
+                logger.warning(f"[BOOKING_CREATE] Slot {date_str} {time_str} already booked by user {eb.user_telegram_id}, status={eb.status}")
+            raise SlotAlreadyBooked("Это время уже занято. Пожалуйста, выберите другое.")
 
         try:
             specialist = await get_specialist_by_id(db, specialist_id)

@@ -73,6 +73,21 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = today + timedelta(days=days)
     
+    # Получаем ВСЕ бронирования на период (для отладки)
+    all_bookings_check = await db.execute(
+        select(Booking)
+        .where(
+            Booking.specialist_id == specialist_id,
+            Booking.consultation_date >= today.strftime("%Y-%m-%d"),
+            Booking.consultation_date < end_date.strftime("%Y-%m-%d")
+        )
+    )
+    all_bookings_check_list = all_bookings_check.scalars().all()
+    logger.info(f"Total bookings for specialist {specialist_id}: {len(all_bookings_check_list)}")
+    for b in all_bookings_check_list:
+        logger.info(f"  Booking #{b.id}: date={b.consultation_date}, time={b.consultation_time}, status={b.status}")
+    
+    # Фильтруем только активные (не отменённые и не завершённые)
     bookings_result = await db.execute(
         select(Booking)
         .where(
@@ -83,6 +98,7 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
         )
     )
     all_bookings = bookings_result.scalars().all()
+    logger.info(f"Active bookings (confirmed+rescheduled): {len(all_bookings)}")
     
     # Группируем бронирования по датам
     bookings_by_date = {}

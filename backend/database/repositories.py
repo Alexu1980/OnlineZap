@@ -268,12 +268,28 @@ async def get_available_slots(
 ) -> list[dict]:
     """Возвращает доступные слоты для выбранной даты и специалиста."""
     day_of_week = target_date.weekday()  # 0=Mon...6=Sun
+    date_str = target_date.strftime("%Y-%m-%d")
+    
+    logger.info(f"[SLOTS] Getting available slots: specialist={specialist_id}, date={date_str}")
 
     availabilities = await get_availability_for_specialist(db, specialist_id, day_of_week)
     if not availabilities:
+        logger.info(f"[SLOTS] No availability found for specialist={specialist_id}, day_of_week={day_of_week}")
         return []
 
-    date_str = target_date.strftime("%Y-%m-%d")
+    # Получаем ВСЕ бронирования для этой даты
+    all_bookings_check = await db.execute(
+        select(Booking).where(
+            Booking.specialist_id == specialist_id,
+            Booking.consultation_date == date_str,
+        )
+    )
+    all_bookings = all_bookings_check.scalars().all()
+    logger.info(f"[SLOTS] Total bookings for {date_str}: {len(all_bookings)}")
+    for b in all_bookings:
+        logger.info(f"[SLOTS]   Booking #{b.id}: time={b.consultation_time}, status={b.status}")
+    
+    # Фильтруем только не отменённые
     existing = await db.execute(
         select(Booking).where(
             Booking.specialist_id == specialist_id,
@@ -282,6 +298,7 @@ async def get_available_slots(
         )
     )
     booked_times = {b.consultation_time for b in existing.scalars().all()}
+    logger.info(f"[SLOTS] Booked times (non-cancelled): {booked_times}")
 
     # Check reservations
     reservations = await db.execute(
