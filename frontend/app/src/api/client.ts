@@ -69,4 +69,18 @@ export function getTelegramUsername(): string | null {
   return null
 }
 
+// Получение данных пользователя из последней записи
+export async function getUserDataFromLastBooking(userId: number): Promise<{ name: string | null; phone: string | null; found: boolean }> {
+  try {
+    const response = await api.get('/user/data', {
+      params: { user_telegram_id: userId }
+    })
+    console.log('User data from last booking:', response.data)
+    return response.data
+  } catch (e) {
+    console.error('Failed to get user data from last booking:', e)
+    return { name: null, phone: null, found: false }
+  }
+}
+
 export default api

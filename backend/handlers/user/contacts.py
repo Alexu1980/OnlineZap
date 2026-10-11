@@ -9,6 +9,8 @@ from aiogram.types import KeyboardButton, ReplyKeyboardRemove
 from handlers.user.start import BookingFSM
 from keyboards.inline import build_phone_keyboard, build_review_keyboard
 from utils.helpers import get_datetime_display
+from database.engine import AsyncSessionLocal
+from database.models import Booking
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -116,6 +118,28 @@ async def handle_back_from_contacts(message: Message, state: FSMContext):
 
 async def _proceed_to_additional(message: Message, state: FSMContext):
     logger.info(f"[PHONE] Proceeding to additional question for user {message.from_user.id}")
+    
+    # Сохраняем актуальные данные пользователя в БД для MiniApp
+    data = await state.get_data()
+    user_name = data.get("user_name")
+    user_phone = data.get("user_phone")
+    
+    if user_name and user_phone:
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select, desc
+            result = await db.execute(
+                select(Booking)
+                .where(Booking.user_telegram_id == message.from_user.id)
+                .order_by(Booking.created_at.desc())
+                .limit(1)
+            )
+            last_booking = result.scalar_one_or_none()
+            if last_booking:
+                last_booking.user_name = user_name
+                last_booking.user_phone = user_phone
+                await db.commit()
+                logger.info(f"[PHONE] Updated last booking for user {message.from_user.id}: name={user_name}, phone={user_phone}")
+    
     builder = InlineKeyboardBuilder()
     builder.button(
         text="⏭ Пропустить",

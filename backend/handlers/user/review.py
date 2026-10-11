@@ -248,6 +248,28 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "edit_booking")
 async def cb_edit_booking(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[EDIT] User {callback.from_user.id} requested to edit booking data")
+    # Сохраняем актуальные данные пользователя в БД для MiniApp
+    data = await state.get_data()
+    user_name = data.get("user_name")
+    user_phone = data.get("user_phone")
+    
+    if user_name and user_phone:
+        async with AsyncSessionLocal() as db:
+            # Обновляем последнюю запись пользователя
+            from sqlalchemy import select, desc
+            result = await db.execute(
+                select(Booking)
+                .where(Booking.user_telegram_id == callback.from_user.id)
+                .order_by(Booking.created_at.desc())
+                .limit(1)
+            )
+            last_booking = result.scalar_one_or_none()
+            if last_booking:
+                last_booking.user_name = user_name
+                last_booking.user_phone = user_phone
+                await db.commit()
+                logger.info(f"[EDIT] Updated last booking for user {callback.from_user.id}: name={user_name}, phone={user_phone}")
+    
     await state.set_state(BookingFSM.AWAITING_NAME)
     await callback.message.answer(
         "✏️ Введите ваше имя заново:",

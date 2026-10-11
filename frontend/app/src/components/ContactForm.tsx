@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useBookingStore } from '../store/bookingStore'
-import api, { getTelegramUserId, getTelegramUsername } from '../api/client'
+import api, { getTelegramUserId, getTelegramUsername, getUserDataFromLastBooking } from '../api/client'
 import type { BookingCreate } from '../api/types'
 import WebApp from '@twa-dev/sdk'
 
@@ -12,7 +12,9 @@ export default function ContactForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Автозаполнение данных из Telegram
+  console.log('ContactForm render:', { specialist: specialist?.name, date, time })
+
+  // Автозаполнение данных из Telegram и последней записи
   useEffect(() => {
     const userId = getTelegramUserId()
     const username = getTelegramUsername()
@@ -20,6 +22,30 @@ export default function ContactForm() {
       setName(username)
     }
     console.log('Telegram user:', { userId, username })
+    
+    // Получаем данные из последней записи
+    if (userId) {
+      getUserDataFromLastBooking(userId).then(data => {
+        if (data.found) {
+          if (!name && data.name) {
+            setName(data.name)
+            console.log('Auto-filled name from last booking:', data.name)
+          }
+          if (!phone && data.phone) {
+            setPhone(data.phone)
+            console.log('Auto-filled phone from last booking:', data.phone)
+          }
+        }
+      }).catch(err => console.error('Error loading user data:', err))
+    }
+    
+    // Проверка что дата и время выбраны
+    if (!date || !time) {
+      console.warn('ContactForm: date or time not selected, redirecting to slots')
+      setTimeout(() => {
+        prevStep()
+      }, 100)
+    }
   }, [])
 
   // Валидация российского номера телефона
@@ -94,6 +120,15 @@ export default function ContactForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Проверка что дата и время выбраны
+    if (!date || !time) {
+      setError('Отсутствует дата или время. Пожалуйста, начните запись заново.')
+      setTimeout(() => {
+        prevStep()
+      }, 2000)
+      return
+    }
+    
     // Валидация номера телефона
     if (!validatePhone(phone)) {
       setError('Введите номер в формате +7 (999) 123-45-67')
@@ -113,11 +148,12 @@ export default function ContactForm() {
       const telegramUsername = getTelegramUsername()
       
       console.log('Sending booking with Telegram user:', { telegramUserId, telegramUsername })
+      console.log('Booking data:', { specialist_id: specialist!.id, date, time, name: name.trim(), phone: phone.trim() })
 
       const bookingData: BookingCreate = {
         specialist_id: specialist!.id,
-        date: date!,
-        time: time!,
+        date: date,
+        time: time,
         name: name.trim(),
         phone: phone.trim(),
         additional_info: additionalInfo.trim() || undefined,

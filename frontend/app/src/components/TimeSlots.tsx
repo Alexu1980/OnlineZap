@@ -31,6 +31,7 @@ export default function TimeSlots() {
 
   useEffect(() => {
     if (!specialist || !date) {
+      console.warn('TimeSlots: specialist or date not selected')
       prevStep()
       return
     }
@@ -38,6 +39,7 @@ export default function TimeSlots() {
   }, [specialist, date])
 
   const handleSlotSelect = (slotTime: string) => {
+    console.log('Slot selected:', { date, time: slotTime })
     setTime(slotTime)
     nextStep()
   }
