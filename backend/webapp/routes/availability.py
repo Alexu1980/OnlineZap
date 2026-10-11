@@ -58,8 +58,13 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
     if not availabilities:
         return {"dates": []}
     
-    # Общее количество слотов в день
-    total_slots_per_day = len(availabilities)
+    # Группируем availability по дням недели
+    availabilities_by_dow = {}
+    for avail in availabilities:
+        dow = avail.day_of_week
+        if dow not in availabilities_by_dow:
+            availabilities_by_dow[dow] = []
+        availabilities_by_dow[dow].append(avail)
     
     # Определение рабочих дней (day_of_week из Availability)
     working_days = {avail.day_of_week for avail in availabilities}
@@ -74,7 +79,7 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
             Booking.specialist_id == specialist_id,
             Booking.consultation_date >= today.strftime("%Y-%m-%d"),
             Booking.consultation_date < end_date.strftime("%Y-%m-%d"),
-            Booking.status != "Отменена"
+            Booking.status.in_(["Подтверждена", "Перенесена"])
         )
     )
     all_bookings = bookings_result.scalars().all()
@@ -99,15 +104,18 @@ async def _get_availability_data(specialist_id: int, days: int, db: AsyncSession
         is_working_day = day_of_week in working_days
         
         if is_working_day:
+            # Слоты в этот день недели для данного специалиста
+            day_avail_count = len(availabilities_by_dow.get(day_of_week, []))
+            
             # Считаем занятые слоты на эту дату
             booked_count = len(bookings_by_date.get(date_str, []))
             
-            # Доступные слоты = общее количество - занятые
-            available_count = max(0, total_slots_per_day - booked_count)
+            # Доступные слоты = слоты в день - занятые
+            available_count = max(0, day_avail_count - booked_count)
             
             has_slots = available_count > 0
             
-            logger.info(f"Date {date_str}: total={total_slots_per_day}, booked={booked_count}, available={available_count}")
+            logger.info(f"Date {date_str}: total={day_avail_count}, booked={booked_count}, available={available_count}")
             
             dates.append(AvailabilityResponse(
                 date=date_str,
