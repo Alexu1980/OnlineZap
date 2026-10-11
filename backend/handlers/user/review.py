@@ -210,7 +210,16 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             
             logger.info(f"[CONFIRM] Booking #{booking_id} SUCCESSFULLY created!")
 
-        await state.clear()
+        # Сохраняем имя и телефон для использования в будущих записях
+        await state.update_data(
+            user_name=name,
+            user_phone=phone,
+        )
+        # Очищаем только данные бронирования, но сохраняем имя/телефон
+        await state.set_data({
+            "user_name": name,
+            "user_phone": phone,
+        })
 
         confirm_msg = (
             f"✅ Ваша запись подтверждена!\n\n"
@@ -248,27 +257,38 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "edit_booking")
 async def cb_edit_booking(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[EDIT] User {callback.from_user.id} requested to edit booking data")
-    # Сохраняем актуальные данные пользователя в БД для MiniApp
-    data = await state.get_data()
-    user_name = data.get("user_name")
-    user_phone = data.get("user_phone")
     
-    if user_name and user_phone:
-        async with AsyncSessionLocal() as db:
-            # Обновляем последнюю запись пользователя
-            from sqlalchemy import select, desc
-            result = await db.execute(
-                select(Booking)
-                .where(Booking.user_telegram_id == callback.from_user.id)
-                .order_by(Booking.created_at.desc())
-                .limit(1)
-            )
-            last_booking = result.scalar_one_or_none()
-            if last_booking:
-                last_booking.user_name = user_name
-                last_booking.user_phone = user_phone
-                await db.commit()
-                logger.info(f"[EDIT] Updated last booking for user {callback.from_user.id}: name={user_name}, phone={user_phone}")
+    # Загружаем последнюю запись пользователя и сохраняем данные в state
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Booking)
+            .where(Booking.user_telegram_id == callback.from_user.id)
+            .order_by(Booking.created_at.desc())
+            .limit(1)
+        )
+        last_booking = result.scalar_one_or_none()
+        
+        if not last_booking:
+            await callback.message.answer("Записи не найдены.")
+            await callback.answer()
+            return
+        
+        # Сохраняем данные из последней записи в state
+        await state.update_data(
+            user_name=last_booking.user_name,
+            user_phone=last_booking.user_phone,
+            specialist_id=last_booking.specialist_id,
+            specialist_name=last_booking.specialist_name,
+            selected_date=last_booking.consultation_date,
+            selected_time=last_booking.consultation_time,
+            consultation_datetime=last_booking.consultation_datetime.isoformat() if last_booking.consultation_datetime else "",
+        )
+        
+        # Обновляем данные в БД для MiniApp
+        last_booking.user_name = last_booking.user_name  # обновляем при изменении
+        last_booking.user_phone = last_booking.user_phone
+        await db.commit()
+        logger.info(f"[EDIT] Loaded last booking #{last_booking.id} into state for user {callback.from_user.id}")
     
     await state.set_state(BookingFSM.AWAITING_NAME)
     await callback.message.answer(
