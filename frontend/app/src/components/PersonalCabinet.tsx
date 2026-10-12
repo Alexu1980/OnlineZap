@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useBookingStore } from '../store/bookingStore'
 import api, { getTelegramUserId } from '../api/client'
 import WebApp from '@twa-dev/sdk'
 
@@ -17,7 +16,6 @@ interface PersonalCabinetProps {
 }
 
 export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
-  const { prevStep } = useBookingStore()
   const [activeBookings, setActiveBookings] = useState<Booking[]>([])
   const [pastBookings, setPastBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
