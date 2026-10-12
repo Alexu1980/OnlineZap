@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import WebApp from '@twa-dev/sdk'
 import ClinicHeader from './components/ClinicHeader'
 import SpecialistSelect from './components/SpecialistSelect'
@@ -6,10 +6,12 @@ import Calendar from './components/Calendar'
 import TimeSlots from './components/TimeSlots'
 import ContactForm from './components/ContactForm'
 import Confirmation from './components/Confirmation'
+import PersonalCabinet from './components/PersonalCabinet'
 import { useBookingStore } from './store/bookingStore'
 
 function App() {
   const { step } = useBookingStore()
+  const [showCabinet, setShowCabinet] = useState(false)
 
   useEffect(() => {
     // Инициализация Telegram WebApp
@@ -42,7 +44,11 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <ClinicHeader />
       <main className="p-4">
-        {renderStep()}
+        {showCabinet ? (
+          <PersonalCabinet onClose={() => setShowCabinet(false)} />
+        ) : (
+          renderStep()
+        )}
       </main>
     </div>
   )

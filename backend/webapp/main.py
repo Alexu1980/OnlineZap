@@ -7,7 +7,7 @@ from pathlib import Path
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from webapp.routes import availability, slots, bookings, specialists, user_data
+from webapp.routes import availability, slots, bookings, specialists, user_data, user_bookings
 
 logger = logging.getLogger("webapp")
 
@@ -50,6 +50,7 @@ app.include_router(slots.router, prefix="/api", tags=["slots"])
 app.include_router(bookings.router, prefix="/api", tags=["bookings"])
 app.include_router(specialists.router, prefix="/api", tags=["specialists"])
 app.include_router(user_data.router, prefix="/api", tags=["user_data"])
+app.include_router(user_bookings.router, prefix="/api", tags=["user_bookings"])
 
 # Статические файлы для MiniApp
 STATIC_DIR = Path(__file__).parent.parent / "static" / "app"

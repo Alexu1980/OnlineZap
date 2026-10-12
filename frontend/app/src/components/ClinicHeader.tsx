@@ -1,12 +1,13 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import WebApp from '@twa-dev/sdk'
 import { useBookingStore } from '../store/bookingStore'
 
 export default function ClinicHeader() {
   const { step, prevStep } = useBookingStore()
+  const [showCabinet, setShowCabinet] = useState(false)
 
   useEffect(() => {
-    if (step !== 'specialist' && WebApp.BackButton) {
+    if (step !== 'specialist' && WebApp.BackButton && !showCabinet) {
       WebApp.BackButton.show()
       WebApp.BackButton.onClick(handleBack)
     } else {
@@ -20,13 +21,24 @@ export default function ClinicHeader() {
         WebApp.BackButton.offClick(handleBack)
       }
     }
-  }, [step])
+  }, [step, showCabinet])
 
   const handleBack = () => {
-    prevStep()
+    if (showCabinet) {
+      setShowCabinet(false)
+    } else {
+      prevStep()
+    }
   }
 
-  const showBackButton = step !== 'specialist'
+  const handleOpenCabinet = () => {
+    setShowCabinet(true)
+    if (WebApp.BackButton) {
+      WebApp.BackButton.show()
+    }
+  }
+
+  const showBackButton = step !== 'specialist' && !showCabinet
 
   return (
     <div className="bg-white p-4 shadow-sm flex items-center gap-3">
@@ -73,6 +85,27 @@ export default function ClinicHeader() {
         <h1 className="text-lg font-bold text-gray-900">Клиника "Здоровье"</h1>
         <p className="text-sm text-gray-600">Запись на консультацию</p>
       </div>
+      
+      {/* Кнопка "Личный кабинет" */}
+      <button
+        onClick={handleOpenCabinet}
+        className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors"
+        title="Личный кабинет"
+      >
+        <svg
+          className="w-5 h-5 text-blue-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+          />
+        </svg>
+      </button>
     </div>
   )
 }
