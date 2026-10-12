@@ -131,6 +131,24 @@ async def cb_back_to_specialist(callback: CallbackQuery, state: FSMContext, db_s
 @router.callback_query(lambda c: c.data == "edit_personal_data")
 async def cb_edit_personal_data(callback: CallbackQuery, state: FSMContext):
     logger.info(f"[EDIT_DATA] User {callback.from_user.id} requested to edit personal data")
+    
+    # Проверяем текущие данные state
+    data = await state.get_data()
+    specialist_id = data.get("specialist_id")
+    specialist_name = data.get("specialist_name")
+    
+    if not specialist_id:
+        logger.warning(f"[EDIT_DATA] No specialist_id in state for user {callback.from_user.id}")
+        await callback.message.answer("Ошибка. Начните заново: /start")
+        await state.clear()
+        return
+    
+    # Сохраняем specialist_id и имя/телефон перед переходом к вводу
+    await state.update_data(
+        specialist_id=specialist_id,
+        specialist_name=specialist_name,
+    )
+    
     await state.set_state(BookingFSM.AWAITING_NAME)
     await callback.message.answer(
         "✏️ Введите ваше имя:",

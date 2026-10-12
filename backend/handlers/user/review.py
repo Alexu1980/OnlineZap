@@ -211,15 +211,11 @@ async def cb_confirm_booking(callback: CallbackQuery, state: FSMContext):
             logger.info(f"[CONFIRM] Booking #{booking_id} SUCCESSFULLY created!")
 
         # Сохраняем имя и телефон для использования в будущих записях
-        await state.update_data(
-            user_name=name,
-            user_phone=phone,
-        )
-        # Очищаем только данные бронирования, но сохраняем имя/телефон
         await state.set_data({
             "user_name": name,
             "user_phone": phone,
         })
+        logger.info(f"[CONFIRM] Preserved user_name={name}, user_phone={phone} in state")
 
         confirm_msg = (
             f"✅ Ваша запись подтверждена!\n\n"
@@ -284,11 +280,7 @@ async def cb_edit_booking(callback: CallbackQuery, state: FSMContext):
             consultation_datetime=last_booking.consultation_datetime.isoformat() if last_booking.consultation_datetime else "",
         )
         
-        # Обновляем данные в БД для MiniApp
-        last_booking.user_name = last_booking.user_name  # обновляем при изменении
-        last_booking.user_phone = last_booking.user_phone
-        await db.commit()
-        logger.info(f"[EDIT] Loaded last booking #{last_booking.id} into state for user {callback.from_user.id}")
+        logger.info(f"[EDIT] Loaded booking #{last_booking.id}: name={last_booking.user_name}, phone={last_booking.user_phone}, specialist_id={last_booking.specialist_id}, date={last_booking.consultation_date}, time={last_booking.consultation_time}")
     
     await state.set_state(BookingFSM.AWAITING_NAME)
     await callback.message.answer(

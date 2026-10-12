@@ -7,7 +7,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram.types import KeyboardButton, ReplyKeyboardRemove
 
 from handlers.user.start import BookingFSM
-from keyboards.inline import build_phone_keyboard, build_review_keyboard
+from keyboards.inline import build_phone_keyboard, build_review_keyboard, build_date_keyboard
 from utils.helpers import get_datetime_display
 from database.engine import AsyncSessionLocal
 from database.models import Booking
@@ -123,6 +123,7 @@ async def _proceed_to_additional(message: Message, state: FSMContext):
     data = await state.get_data()
     user_name = data.get("user_name")
     user_phone = data.get("user_phone")
+    specialist_id = data.get("specialist_id")
     
     if user_name and user_phone:
         async with AsyncSessionLocal() as db:
@@ -140,21 +141,38 @@ async def _proceed_to_additional(message: Message, state: FSMContext):
                 await db.commit()
                 logger.info(f"[PHONE] Updated last booking for user {message.from_user.id}: name={user_name}, phone={user_phone}")
     
-    builder = InlineKeyboardBuilder()
-    builder.button(
-        text="⏭ Пропустить",
-        callback_data="skip_additional",
-    )
-    builder.adjust(1)
-    
-    await state.set_state(BookingFSM.AWAITING_ADDITIONAL)
-    await message.answer(
-        "📝 Необязательный вопрос:\n\n"
-        "Есть ли что-то, что вы хотели бы сообщить специалисту "
-        "перед консультацией?\n\n"
-        "Вы можете написать или нажать кнопку ниже:",
-        reply_markup=builder.as_markup(),
-    )
+    # Проверяем есть ли specialist_id (пользователь уже выбрал специалиста)
+    if specialist_id:
+        # Пользователь уже на этапе выбора даты - показываем дату
+        from handlers.user.scheduling import get_available_dates
+        dates = await get_available_dates(specialist_id)
+        if not dates:
+            await message.answer("⚠️ На эту дату нет доступных слотов.")
+            return
+        
+        keyboard = build_date_keyboard(dates, back_callback="back_to_specialist")
+        await message.answer(
+            "📅 Выберите дату консультации:",
+            reply_markup=keyboard,
+        )
+        await state.set_state(BookingFSM.AWAITING_DATE)
+    else:
+        # Новый пользователь - переходим к дополнительному вопросу
+        builder = InlineKeyboardBuilder()
+        builder.button(
+            text="⏭ Пропустить",
+            callback_data="skip_additional",
+        )
+        builder.adjust(1)
+        
+        await state.set_state(BookingFSM.AWAITING_ADDITIONAL)
+        await message.answer(
+            "📝 Необязательный вопрос:\n\n"
+            "Есть ли что-то, что вы хотели бы сообщить специалисту "
+            "перед консультацией?\n\n"
+            "Вы можете написать или нажать кнопку ниже:",
+            reply_markup=builder.as_markup(),
+        )
 
 
 @router.callback_query(F.data == "skip_additional")
