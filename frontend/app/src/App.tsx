@@ -42,7 +42,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ClinicHeader />
+      <ClinicHeader 
+        showCabinet={showCabinet} 
+        onOpenCabinet={() => setShowCabinet(true)}
+        onCloseCabinet={() => setShowCabinet(false)}
+      />
       <main className="p-4">
         {showCabinet ? (
           <PersonalCabinet onClose={() => setShowCabinet(false)} />

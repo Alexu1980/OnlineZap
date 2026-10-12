@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import WebApp from '@twa-dev/sdk'
 import { useBookingStore } from '../store/bookingStore'
 
-export default function ClinicHeader() {
+interface ClinicHeaderProps {
+  showCabinet?: boolean
+  onOpenCabinet?: () => void
+  onCloseCabinet?: () => void
+}
+
+export default function ClinicHeader({ showCabinet = false, onOpenCabinet, onCloseCabinet }: ClinicHeaderProps) {
   const { step, prevStep } = useBookingStore()
-  const [showCabinet, setShowCabinet] = useState(false)
 
   useEffect(() => {
     if (step !== 'specialist' && WebApp.BackButton && !showCabinet) {
@@ -24,17 +29,16 @@ export default function ClinicHeader() {
   }, [step, showCabinet])
 
   const handleBack = () => {
-    if (showCabinet) {
-      setShowCabinet(false)
+    if (showCabinet && onCloseCabinet) {
+      onCloseCabinet()
     } else {
       prevStep()
     }
   }
 
   const handleOpenCabinet = () => {
-    setShowCabinet(true)
-    if (WebApp.BackButton) {
-      WebApp.BackButton.show()
+    if (onOpenCabinet) {
+      onOpenCabinet()
     }
   }
 
