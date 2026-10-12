@@ -10,17 +10,47 @@ interface Booking {
   status: string
   created_at?: string
 }
-
-interface PersonalCabinetProps {
-  onClose?: () => void
-}
-
 export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
-  const [activeBookings, setActiveBookings] = useState<Booking[]>([])
   const [pastBookings, setPastBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [cancellingId, setCancellingId] = useState<number | null>(null)
+
+  const handleCancelBooking = async (bookingId: number) => {
+    if (!window.confirm('Вы уверены, что хотите отменить запись?')) {
+      return
+    }
+
+    try {
+      setCancellingId(bookingId)
+      const userId = getTelegramUserId()
+      if (!userId) {
+        setError('Не удалось получить данные пользователя')
+        return
+      }
+
+      await api.post(`/bookings/${bookingId}/cancel`, null, {
+        params: { user_telegram_id: userId }
+      })
+
+      // Обновляем список записей
+      await loadBookings()
+      WebApp.HapticFeedback.notificationOccurred('success')
+    } catch (err: any) {
+      WebApp.HapticFeedback.notificationOccurred('error')
+      setError(err.response?.data?.detail || 'Ошибка при отмене записи')
+      console.error(err)
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  const handleRescheduleBooking = (bookingId: number) => {
+    // TODO: Реализовать перенос - открываем календарь для выбора новой даты
+    WebApp.showAlert('Функция переноса будет доступна в ближайшее время')
+  }
+  const [cancellingId, setCancellingId] = useState<number | null>(null)
 
   const loadBookings = async () => {
     try {
@@ -154,8 +184,23 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
                     </span>
                   </div>
                 </div>
-                <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-                  Запись #{booking.id}
+                <div className="text-xs text-gray-500 pt-2 border-t border-gray-100 flex items-center justify-between">
+                  <span>Запись #{booking.id}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleRescheduleBooking(booking.id)}
+                      className="text-blue-600 hover:text-blue-700 text-xs px-2 py-1 bg-blue-50 rounded"
+                    >
+                      🔄 Перенести
+                    </button>
+                    <button
+                      onClick={() => handleCancelBooking(booking.id)}
+                      disabled={cancellingId === booking.id}
+                      className="text-red-600 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded disabled:opacity-50"
+                    >
+                      {cancellingId === booking.id ? 'Отмена...' : '❌ Отменить'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
