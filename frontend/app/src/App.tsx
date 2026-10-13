@@ -7,11 +7,13 @@ import TimeSlots from './components/TimeSlots'
 import ContactForm from './components/ContactForm'
 import Confirmation from './components/Confirmation'
 import PersonalCabinet from './components/PersonalCabinet'
+import Reschedule from './components/Reschedule'
 import { useBookingStore } from './store/bookingStore'
 
 function App() {
   const { step } = useBookingStore()
   const [showCabinet, setShowCabinet] = useState(false)
+  const [showReschedule, setShowReschedule] = useState(false)
 
   useEffect(() => {
     // Инициализация Telegram WebApp
@@ -43,13 +45,23 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <ClinicHeader 
-        showCabinet={showCabinet} 
+        showCabinet={showCabinet}
         onOpenCabinet={() => setShowCabinet(true)}
         onCloseCabinet={() => setShowCabinet(false)}
       />
       <main className="p-4">
-        {showCabinet ? (
-          <PersonalCabinet onClose={() => setShowCabinet(false)} />
+        {showReschedule ? (
+          <Reschedule 
+            onClose={() => setShowReschedule(false)}
+          />
+        ) : showCabinet ? (
+          <PersonalCabinet 
+            onClose={() => setShowCabinet(false)}
+            onOpenReschedule={(id, name, date, time) => {
+              setShowCabinet(false)
+              setShowReschedule(true)
+            }}
+          />
         ) : (
           renderStep()
         )}

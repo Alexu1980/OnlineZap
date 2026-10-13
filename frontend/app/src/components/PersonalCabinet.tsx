@@ -13,9 +13,10 @@ interface Booking {
 
 interface PersonalCabinetProps {
   onClose?: () => void
+  onOpenReschedule?: (bookingId: number, specialistName: string, date: string, time: string) => void
 }
 
-export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
+export default function PersonalCabinet({ onClose, onOpenReschedule }: PersonalCabinetProps) {
   const [activeBookings, setActiveBookings] = useState<Booking[]>([])
   const [pastBookings, setPastBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,9 +53,12 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
     }
   }
 
-  const handleRescheduleBooking = () => {
-    // TODO: Реализовать перенос - открываем календарь для выбора новой даты
-    window.alert('Функция переноса будет доступна в ближайшее время')
+  const handleRescheduleBooking = (bookingId: number) => {
+    // Находим booking в activeBookings
+    const booking = activeBookings.find(b => b.id === bookingId)
+    if (booking && onOpenReschedule) {
+      onOpenReschedule(bookingId, booking.specialist_name, booking.consultation_date, booking.consultation_time)
+    }
   }
 
   const loadBookings = async () => {
@@ -150,23 +154,25 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4 text-gray-900">
-        📋 Мои записи
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">
+          📋 Мои записи
+        </h2>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            ← Назад
+          </button>
+        )}
+      </div>
 
       {/* Активные записи */}
       {activeBookings.length > 0 ? (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-700">Активные записи</h3>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                ← Назад
-              </button>
-            )}
           </div>
           <div className="space-y-3">
             {activeBookings.map((booking) => (

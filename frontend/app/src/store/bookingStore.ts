@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type Step = 'specialist' | 'calendar' | 'slots' | 'form' | 'confirmation'
+export type Step = 'specialist' | 'calendar' | 'slots' | 'form' | 'confirmation' | 'reschedule'
 
 interface Specialist {
   id: number
@@ -15,11 +15,15 @@ interface BookingState {
   time: string
   step: Step
   
+  // Данные для переноса
+  rescheduleBookingId: number | null
+  
   // Действия
   setSpecialist: (specialist: Specialist) => void
   setDate: (date: string) => void
   setTime: (time: string) => void
   setStep: (step: Step) => void
+  setRescheduleBookingId: (id: number | null) => void
   nextStep: () => void
   prevStep: () => void
   reset: () => void
@@ -30,11 +34,13 @@ export const useBookingStore = create<BookingState>((set) => ({
   date: '',
   time: '',
   step: 'specialist',
+  rescheduleBookingId: null,
   
   setSpecialist: (specialist) => set({ specialist }),
   setDate: (date) => set({ date }),
   setTime: (time) => set({ time }),
   setStep: (step) => set({ step }),
+  setRescheduleBookingId: (id) => set({ rescheduleBookingId: id }),
   
   nextStep: () => set((state) => {
     const steps: Step[] = ['specialist', 'calendar', 'slots', 'form', 'confirmation']
@@ -59,5 +65,6 @@ export const useBookingStore = create<BookingState>((set) => ({
     date: '',
     time: '',
     step: 'specialist',
+    rescheduleBookingId: null,
   }),
 }))
