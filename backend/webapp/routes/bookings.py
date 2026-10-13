@@ -1,11 +1,14 @@
 """Маршрут для создания бронирований."""
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from webapp.dependencies import get_db_session
 from webapp.schemas import BookingCreate, BookingResponse
 from services.booking_service import BookingService
+from database.models import Booking
+from database.repositories import update_booking_status
 
 logger = logging.getLogger("bookings")
 
@@ -91,3 +94,39 @@ async def create_booking_trailing(
     except Exception as e:
         logger.error(f"Error creating booking: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/bookings/{booking_id}/cancel")
+async def cancel_booking(
+    booking_id: int,
+    user_telegram_id: int = Query(..., description="Telegram ID пользователя"),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Отмена записи пользователя."""
+    logger.info(f"CANCEL: User {user_telegram_id} cancelling booking #{booking_id}")
+    
+    # Проверяем, что запись принадлежит пользователю
+    result = await db.execute(
+        select(Booking).where(
+            Booking.id == booking_id,
+            Booking.user_telegram_id == user_telegram_id
+        )
+    )
+    booking = result.scalar_one_or_none()
+    
+    if not booking:
+        raise HTTPException(status_code=404, detail="Запись не найдена")
+    
+    if booking.status == "Отменена":
+        raise HTTPException(status_code=400, detail="Запись уже отменена")
+    
+    # Отменяем запись
+    await update_booking_status(db, booking_id, "Отменена")
+    await db.commit()
+    
+    logger.info(f"CANCEL: Booking #{booking_id} cancelled by user {user_telegram_id}")
+    
+    return {
+        "success": True,
+        "message": f"Запись #{booking_id} отменена"
+    }
