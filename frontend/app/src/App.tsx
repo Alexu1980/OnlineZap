@@ -64,7 +64,7 @@ function App() {
         ) : showCabinet ? (
           <PersonalCabinet 
             onClose={() => setShowCabinet(false)}
-            onOpenReschedule={(id, name, date, time) => {
+            onOpenReschedule={(_id, _name, _date, _time) => {
               setShowCabinet(false)
               setShowReschedule(true)
             }}

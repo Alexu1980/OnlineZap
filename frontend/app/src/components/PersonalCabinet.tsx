@@ -199,7 +199,7 @@ export default function PersonalCabinet({ onClose, onOpenReschedule }: PersonalC
                   <span>Запись #{booking.id}</span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleRescheduleBooking()}
+                      onClick={() => handleRescheduleBooking(booking.id)}
                       className="text-blue-600 hover:text-blue-700 text-xs px-2 py-1 bg-blue-50 rounded"
                     >
                       🔄 Перенести

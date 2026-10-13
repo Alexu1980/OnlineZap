@@ -24,7 +24,7 @@ interface RescheduleProps {
 }
 
 export default function Reschedule({ onClose, initialBookingId, initialSpecialistName, initialDate, initialTime }: RescheduleProps) {
-  const { specialist, date, time, setSpecialist, setDate, setTime, setStep, setRescheduleBookingId, prevStep, reset } = useBookingStore()
+  const { date, time, setDate, setTime, prevStep, reset } = useBookingStore()
   const [availability, setAvailability] = useState<Availability[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -164,7 +164,7 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
       })
 
       WebApp.HapticFeedback.notificationOccurred('success')
-      WebApp.showAlert(`✅ Консультация перенесена!\n\nНовая дата: ${formatDate(date)}\nВремя: ${time}`)
+      window.alert(`✅ Консультация перенесена!\n\nНовая дата: ${formatDate(date)}\nВремя: ${time}`)
       
       reset()
       prevStep()
