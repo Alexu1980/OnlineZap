@@ -11,9 +11,15 @@ import Reschedule from './components/Reschedule'
 import { useBookingStore } from './store/bookingStore'
 
 function App() {
-  const { step } = useBookingStore()
+  const { step, reset } = useBookingStore()
   const [showCabinet, setShowCabinet] = useState(false)
   const [showReschedule, setShowReschedule] = useState(false)
+
+  const handleReset = () => {
+    reset()
+    setShowCabinet(false)
+    setShowReschedule(false)
+  }
 
   useEffect(() => {
     // Инициализация Telegram WebApp
@@ -48,6 +54,7 @@ function App() {
         showCabinet={showCabinet}
         onOpenCabinet={() => setShowCabinet(true)}
         onCloseCabinet={() => setShowCabinet(false)}
+        onReset={handleReset}
       />
       <main className="p-4">
         {showReschedule ? (

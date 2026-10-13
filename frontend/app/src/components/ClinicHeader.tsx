@@ -6,9 +6,10 @@ interface ClinicHeaderProps {
   showCabinet?: boolean
   onOpenCabinet?: () => void
   onCloseCabinet?: () => void
+  onReset?: () => void
 }
 
-export default function ClinicHeader({ showCabinet = false, onOpenCabinet, onCloseCabinet }: ClinicHeaderProps) {
+export default function ClinicHeader({ showCabinet = false, onOpenCabinet, onCloseCabinet, onReset }: ClinicHeaderProps) {
   const { step, prevStep } = useBookingStore()
 
   useEffect(() => {
@@ -27,6 +28,13 @@ export default function ClinicHeader({ showCabinet = false, onOpenCabinet, onClo
       }
     }
   }, [step, showCabinet])
+
+  const handleLogoClick = () => {
+    // Сбрасываем состояние и возвращаемся на главный экран
+    if (onReset) {
+      onReset()
+    }
+  }
 
   const handleBack = () => {
     if (showCabinet && onCloseCabinet) {
@@ -69,7 +77,11 @@ export default function ClinicHeader({ showCabinet = false, onOpenCabinet, onClo
       )}
       
       {/* Логотип клиники */}
-      <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+      <div 
+        className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors"
+        onClick={handleLogoClick}
+        title="Вернуться на главный экран"
+      >
         <svg
           className="w-8 h-8 text-white"
           fill="none"
@@ -85,7 +97,11 @@ export default function ClinicHeader({ showCabinet = false, onOpenCabinet, onClo
         </svg>
       </div>
       
-      <div className="flex-1">
+      <div 
+        className="flex-1 cursor-pointer"
+        onClick={handleLogoClick}
+        title="Вернуться на главный экран"
+      >
         <h1 className="text-lg font-bold text-gray-900">Клиника "Здоровье"</h1>
         <p className="text-sm text-gray-600">Запись на консультацию</p>
       </div>
