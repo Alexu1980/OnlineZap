@@ -10,7 +10,13 @@ interface Booking {
   status: string
   created_at?: string
 }
+
+interface PersonalCabinetProps {
+  onClose?: () => void
+}
+
 export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
+  const [activeBookings, setActiveBookings] = useState<Booking[]>([])
   const [pastBookings, setPastBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +56,6 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
     // TODO: Реализовать перенос - открываем календарь для выбора новой даты
     WebApp.showAlert('Функция переноса будет доступна в ближайшее время')
   }
-  const [cancellingId, setCancellingId] = useState<number | null>(null)
 
   const loadBookings = async () => {
     try {
@@ -198,7 +203,7 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
                       disabled={cancellingId === booking.id}
                       className="text-red-600 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded disabled:opacity-50"
                     >
-                      {cancellingId === booking.id ? 'Отмена...' : '❌ Отменить'}
+                      {cancellingId === booking.id ? 'От��ена...' : '❌ Отменить'}
                     </button>
                   </div>
                 </div>
