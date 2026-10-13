@@ -52,7 +52,7 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
     }
   }
 
-  const handleRescheduleBooking = (bookingId: number) => {
+  const handleRescheduleBooking = () => {
     // TODO: Реализовать перенос - открываем календарь для выбора новой даты
     WebApp.showAlert('Функция переноса будет доступна в ближайшее время')
   }
@@ -193,7 +193,7 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
                   <span>Запись #{booking.id}</span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleRescheduleBooking(booking.id)}
+                      onClick={() => handleRescheduleBooking()}
                       className="text-blue-600 hover:text-blue-700 text-xs px-2 py-1 bg-blue-50 rounded"
                     >
                       🔄 Перенести
