@@ -54,7 +54,7 @@ export default function PersonalCabinet({ onClose }: PersonalCabinetProps) {
 
   const handleRescheduleBooking = () => {
     // TODO: Реализовать перенос - открываем календарь для выбора новой даты
-    WebApp.showAlert('Функция переноса будет доступна в ближайшее время')
+    window.alert('Функция переноса будет доступна в ближайшее время')
   }
 
   const loadBookings = async () => {
