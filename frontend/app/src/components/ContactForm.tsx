@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useBookingStore } from '../store/bookingStore'
 import api, { getTelegramUserId, getTelegramUsername, getUserDataFromLastBooking } from '../api/client'
 import type { BookingCreate } from '../api/types'
-import WebApp from '@twa-dev/sdk'
 
 export default function ContactForm() {
   const { specialist, date, time, nextStep, prevStep } = useBookingStore()
