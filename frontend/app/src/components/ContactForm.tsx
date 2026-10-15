@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useBookingStore } from '../store/bookingStore'
-import api from '../api/client'
+import api, { getTelegramUserId, getTelegramUsername, getUserDataFromLastBooking } from '../api/client'
 import type { BookingCreate } from '../api/types'
+import WebApp from '@twa-dev/sdk'
 
 export default function ContactForm() {
   const { specialist, date, time, nextStep, prevStep } = useBookingStore()
@@ -11,8 +12,80 @@ export default function ContactForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Валидация российского номера телефона
+  const validatePhone = (phone: string): boolean => {
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '')
+    if (!/^\+7[0-9]{10}$/.test(cleaned) && !/^\+8[0-9]{10}$/.test(cleaned)) {
+      return false
+    }
+    return true
+  }
+
+  // Форматирование номера при вводе
+  const formatPhone = (value: string): string => {
+    let cleaned = value.replace(/[^0-9]/g, '')
+    if (cleaned.startsWith('8') && cleaned.length === 11) {
+      cleaned = '7' + cleaned.substring(1)
+    }
+    if (cleaned.startsWith('7')) {
+      cleaned = '+7' + cleaned.substring(1)
+    } else if (!cleaned.startsWith('+')) {
+      cleaned = '+7' + cleaned
+    }
+    if (cleaned.length > 3) {
+      cleaned = cleaned.substring(0, 3) + ' (' + cleaned.substring(3)
+    }
+    if (cleaned.length > 7) {
+      cleaned = cleaned.substring(0, 7) + ') ' + cleaned.substring(7)
+    }
+    if (cleaned.length > 12) {
+      cleaned = cleaned.substring(0, 12) + '-' + cleaned.substring(12)
+    }
+    if (cleaned.length > 15) {
+      cleaned = cleaned.substring(0, 15) + '-' + cleaned.substring(15)
+    }
+    return cleaned
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value)
+    setPhone(formatted)
+    if (error && error.includes('телефон')) {
+      setError(null)
+    }
+  }
+
+  // Автозаполнение данных из Telegram и последней записи
+  useEffect(() => {
+    const userId = getTelegramUserId()
+    const username = getTelegramUsername()
+    if (username && !name) {
+      setName(username)
+    }
+    
+    // Получаем данные из последней записи
+    if (userId) {
+      getUserDataFromLastBooking(userId).then(data => {
+        if (data.found) {
+          if (!name && data.name) {
+            setName(data.name)
+          }
+          if (!phone && data.phone) {
+            setPhone(data.phone)
+          }
+        }
+      }).catch(err => console.error('Error loading user data:', err))
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Валидация номера телефона
+    if (!validatePhone(phone)) {
+      setError('Введите номер в формате +7 (999) 123-45-67')
+      return
+    }
     
     if (!name.trim() || !phone.trim()) {
       setError('Пожалуйста, заполните все обязательные поля')
@@ -32,7 +105,16 @@ export default function ContactForm() {
         additional_info: additionalInfo.trim() || undefined,
       }
 
-      await api.post('/bookings', bookingData)
+      // Отправляем user_id и username в headers
+      const telegramUserId = getTelegramUserId()
+      const telegramUsername = getTelegramUsername()
+      
+      await api.post('/bookings', bookingData, {
+        headers: {
+          'X-Telegram-User-Id': telegramUserId || '0',
+          'X-Telegram-Username': telegramUsername || name.trim(),
+        }
+      })
       
       nextStep()
     } catch (err: any) {
@@ -88,7 +170,7 @@ export default function ContactForm() {
             type="tel"
             id="phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={handlePhoneChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="+7 (999) 123-45-67"
             required
