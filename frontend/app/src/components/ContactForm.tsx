@@ -13,7 +13,9 @@ export default function ContactForm() {
 
   // Валидация российского номера телефона
   const validatePhone = (phone: string): boolean => {
-    const cleaned = phone.replace(/[\s\-\(\)]/g, '')
+    // Удаляем все кроме цифр и +
+    const cleaned = phone.replace(/[^0-9+]/g, '')
+    // Проверяем формат +7XXXXXXXXXX или +8XXXXXXXXXX
     if (!/^\+7[0-9]{10}$/.test(cleaned) && !/^\+8[0-9]{10}$/.test(cleaned)) {
       return false
     }
@@ -22,15 +24,37 @@ export default function ContactForm() {
 
   // Форматирование номера при вводе
   const formatPhone = (value: string): string => {
-    let cleaned = value.replace(/[^0-9]/g, '')
-    if (cleaned.startsWith('8') && cleaned.length === 11) {
-      cleaned = '7' + cleaned.substring(1)
+    // Удаляем ВСЕ символы кроме цифр и +
+    let cleaned = value.replace(/[^0-9+]/g, '')
+    
+    // Если есть +, оставляем только первый
+    const plusIndex = cleaned.indexOf('+')
+    if (plusIndex > 0) {
+      cleaned = cleaned.substring(0, plusIndex + 1) + cleaned.substring(plusIndex + 1).replace(/\+/g, '')
     }
-    if (cleaned.startsWith('7')) {
+    
+    // Если начинается с +7 или +8, оставляем только + и цифры
+    if (cleaned.startsWith('+')) {
+      const digits = cleaned.substring(1).replace(/[^0-9]/g, '')
+      cleaned = '+' + digits
+    }
+    
+    // Преобразуем 8 в начале в 7
+    if (cleaned.startsWith('8') && cleaned.length === 11) {
       cleaned = '+7' + cleaned.substring(1)
-    } else if (!cleaned.startsWith('+')) {
+    }
+    
+    // Если начинается с 7 без +, добавляем +
+    if (cleaned.startsWith('7') && !cleaned.startsWith('+')) {
+      cleaned = '+' + cleaned
+    }
+    
+    // Если нет + и не начинается с 7/8, добавляем +7
+    if (!cleaned.startsWith('+') && !cleaned.startsWith('7') && !cleaned.startsWith('8')) {
       cleaned = '+7' + cleaned
     }
+    
+    // Форматируем: +7 (XXX) XXX-XX-XX
     if (cleaned.length > 3) {
       cleaned = cleaned.substring(0, 3) + ' (' + cleaned.substring(3)
     }
@@ -108,9 +132,16 @@ export default function ContactForm() {
       const telegramUserId = getTelegramUserId()
       const telegramUsername = getTelegramUsername()
       
+      console.log('Sending booking with Telegram user:', { telegramUserId, telegramUsername })
+      
+      if (!telegramUserId || telegramUserId === 0) {
+        setError('Не удалось получить ID пользователя. Убедитесь, что MiniApp открыт через Telegram')
+        return
+      }
+      
       await api.post('/bookings', bookingData, {
         headers: {
-          'X-Telegram-User-Id': telegramUserId || '0',
+          'X-Telegram-User-Id': telegramUserId.toString(),
           'X-Telegram-Username': telegramUsername || name.trim(),
         }
       })
