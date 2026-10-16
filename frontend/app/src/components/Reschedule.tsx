@@ -37,9 +37,7 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
   const [rescheduling, setRescheduling] = useState(false)
 
   // Загружаем доступные даты
-  const loadAvailability = async () => {
-    if (!bookingId) return
-    
+  const loadAvailability = async (bookingId: number) => {
     try {
       setLoading(true)
       const userId = getTelegramUserId()
@@ -65,8 +63,8 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
   }
 
   // Загружаем слоты для выбранной даты
-  const loadSlots = async (dateStr: string) => {
-    if (!bookingId || !specialistName) return
+  const loadSlots = async (dateStr: string, bookingId: number, specialistName: string) => {
+    if (!specialistName) return
     
     try {
       setLoading(true)
@@ -109,7 +107,7 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
       setSpecialistName(initialSpecialistName || '')
       setOldDate(initialDate || '')
       setOldTime(initialTime || '')
-      loadAvailability()
+      loadAvailability(initialBookingId)
     }
   }, [initialBookingId])
 
@@ -133,7 +131,9 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
   const handleDateSelect = (dateStr: string) => {
     setDate(dateStr)
     setCurrentStep('time')
-    loadSlots(dateStr)
+    if (bookingId) {
+      loadSlots(dateStr, bookingId, specialistName)
+    }
   }
 
   const handleTimeSelect = (time: string) => {
