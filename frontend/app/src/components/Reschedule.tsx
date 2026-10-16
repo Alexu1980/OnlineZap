@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useBookingStore } from '../store/bookingStore'
 import api, { getTelegramUserId } from '../api/client'
 import WebApp from '@twa-dev/sdk'
@@ -30,14 +30,17 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
   const [error, setError] = useState<string | null>(null)
   const [currentStep, setCurrentStep] = useState<'calendar' | 'time' | 'confirm'>('calendar')
   const [slots, setSlots] = useState<Slot[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const [bookingId, setBookingId] = useState<number | null>(initialBookingId || null)
   const [specialistName, setSpecialistName] = useState<string>(initialSpecialistName || '')
+  const [specialistId, setSpecialistId] = useState<number | null>(null)
   const [oldDate, setOldDate] = useState<string>(initialDate || '')
   const [oldTime, setOldTime] = useState<string>(initialTime || '')
   const [rescheduling, setRescheduling] = useState(false)
+  const initialized = useRef(false)
 
   // Загружаем доступные даты
-  const loadAvailability = async (bookingId: number) => {
+  const loadAvailability = useCallback(async (bookingId: number) => {
     try {
       setLoading(true)
       const userId = getTelegramUserId()
@@ -54,37 +57,30 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
       })
 
       setAvailability(response.data.dates || [])
+      // Сохраняем specialist_id для использования в loadSlots
+      if (response.data.specialist_id) {
+        console.log('RESCHEDULE: specialist_id loaded:', response.data.specialist_id)
+        setSpecialistId(response.data.specialist_id)
+      } else {
+        console.error('RESCHEDULE: specialist_id not found in response', response.data)
+      }
     } catch (err) {
       setError('Не удалось загрузить расписание')
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Загружаем слоты для выбранной даты
-  const loadSlots = async (dateStr: string, bookingId: number, specialistName: string) => {
-    if (!specialistName) return
+  const loadSlots = useCallback(async (dateStr: string, bookingId: number, specialistId: number | null) => {
+    if (!specialistId) {
+      setError('Не удалось получить ID специалиста')
+      return
+    }
     
     try {
-      setLoading(true)
-      const userId = getTelegramUserId()
-      if (!userId) return
-
-      // Получаем specialist_id из booking
-      const response = await api.get(`/bookings/${bookingId}/available-slots`, {
-        params: {
-          user_telegram_id: userId
-        }
-      })
-
-      // Извлекаем specialist_id из ответа
-      const specialistId = response.data?.specialist_id
-      if (!specialistId) {
-        setError('Не удалось получить данные специалиста')
-        return
-      }
-
+      setSlotsLoading(true)
       const slotsResponse = await api.get('/slots', {
         params: {
           specialist_id: specialistId,
@@ -97,12 +93,13 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
       setError('Не удалось загрузить слоты')
       console.error(err)
     } finally {
-      setLoading(false)
+      setSlotsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    if (initialBookingId) {
+    if (initialBookingId && !initialized.current) {
+      initialized.current = true
       setBookingId(initialBookingId)
       setSpecialistName(initialSpecialistName || '')
       setOldDate(initialDate || '')
@@ -129,11 +126,14 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
   }
 
   const handleDateSelect = (dateStr: string) => {
+    console.log('RESCHEDULE: handleDateSelect called, specialistId:', specialistId)
+    if (!specialistId) {
+      setError('Идёт загрузка данных специалиста, подождите...')
+      return
+    }
     setDate(dateStr)
     setCurrentStep('time')
-    if (bookingId) {
-      loadSlots(dateStr, bookingId, specialistName)
-    }
+    loadSlots(dateStr, bookingId || 0, specialistId)
   }
 
   const handleTimeSelect = (time: string) => {
@@ -318,7 +318,11 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
             {formatDate(date)}
           </p>
 
-          {slots.length === 0 ? (
+          {slotsLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : slots.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">На эту дату нет свободных слотов</p>
               <button

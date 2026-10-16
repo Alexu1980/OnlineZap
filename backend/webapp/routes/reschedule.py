@@ -168,4 +168,4 @@ async def get_available_slots_for_reschedule(
                 "slots_count": available_count
             })
     
-    return {"dates": dates}
+    return {"dates": dates, "specialist_id": specialist_id}

@@ -15,12 +15,14 @@ function App() {
   const [showCabinet, setShowCabinet] = useState(false)
   const [showReschedule, setShowReschedule] = useState(false)
   const [rescheduleData, setRescheduleData] = useState<{ id: number; name: string; date: string; time: string } | null>(null)
+  const [reschedulingBookingId, setReschedulingBookingId] = useState<number | null>(null)
 
   const handleReset = () => {
     reset()
     setShowCabinet(false)
     setShowReschedule(false)
     setRescheduleData(null)
+    setReschedulingBookingId(null)
   }
 
   useEffect(() => {
@@ -59,11 +61,13 @@ function App() {
         onReset={handleReset}
       />
       <main className="p-4">
-        {showReschedule && rescheduleData ? (
+        {showReschedule && rescheduleData && reschedulingBookingId ? (
           <Reschedule 
+            key={reschedulingBookingId}
             onClose={() => {
               setShowReschedule(false)
               setRescheduleData(null)
+              setReschedulingBookingId(null)
             }}
             initialBookingId={rescheduleData.id}
             initialSpecialistName={rescheduleData.name}
@@ -76,6 +80,7 @@ function App() {
             onOpenReschedule={(id, name, date, time) => {
               setShowCabinet(false)
               setRescheduleData({ id, name, date, time })
+              setReschedulingBookingId(id)
               setShowReschedule(true)
             }}
           />
