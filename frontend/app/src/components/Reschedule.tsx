@@ -73,7 +73,7 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
   }, [])
 
   // Загружаем слоты для выбранной даты
-  const loadSlots = useCallback(async (dateStr: string, bookingId: number, specialistId: number | null) => {
+  const loadSlots = useCallback(async (dateStr: string, specialistId: number | null) => {
     if (!specialistId) {
       setError('Не удалось получить ID специалиста')
       return
@@ -133,7 +133,7 @@ export default function Reschedule({ onClose, initialBookingId, initialSpecialis
     }
     setDate(dateStr)
     setCurrentStep('time')
-    loadSlots(dateStr, bookingId || 0, specialistId)
+    loadSlots(dateStr, specialistId)
   }
 
   const handleTimeSelect = (time: string) => {
