@@ -187,3 +187,23 @@ def _format_booking_message(booking, show_history: bool = False) -> str:
             pass
     
     return message
+
+
+@router.message(F.text == "📋 Мои записи")
+async def handle_my_bookings_button(message: Message):
+    """Обработчик кнопки 'Мои записи' из напоминания."""
+    logger.info(f"[MY_BOOKINGS] User {message.from_user.id} clicked 'Мои записи' button")
+    
+    # Вызываем тот же функционал, что и callback personal_cabinet
+    from aiogram.types import CallbackQuery
+    
+    # Создаём псевдо-callback для переиспользования логики
+    class FakeCallback:
+        def __init__(self, msg):
+            self.message = msg
+            self.from_user = msg.from_user
+            self.data = "personal_cabinet"
+            self.answer = lambda x: None
+    
+    fake_cb = FakeCallback(message)
+    await cb_personal_cabinet(fake_cb)

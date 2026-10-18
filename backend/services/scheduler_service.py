@@ -143,9 +143,23 @@ class SchedulerService:
             )
 
             try:
+                # Добавляю кнопку для просмотра всех записей
+                from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+                
+                if reminder_type == "24h":
+                    keyboard = ReplyKeyboardMarkup(
+                        keyboard=[
+                            [KeyboardButton(text="📋 Мои записи")]
+                        ],
+                        resize_keyboard=True
+                    )
+                else:
+                    keyboard = None
+
                 await self._bot.send_message(
                     chat_id=booking.user_telegram_id,
                     text=message,
+                    reply_markup=keyboard,
                 )
                 field = "reminder_24h_sent" if reminder_type == "24h" else "reminder_2h_sent"
                 await update_booking_field(db, booking_id, field, True)
